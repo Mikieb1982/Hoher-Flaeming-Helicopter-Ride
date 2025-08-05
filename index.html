@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Hoher Fläming Helicopter Explorer</title>
+    <link rel="stylesheet" href="index.css">
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.12.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-helicopter">🚁</div>
+            <div class="loading-text">Planning your route...</div>
+            <div class="loading-bar">
+                <div class="loading-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map-container">
+        <div id="map-viewport">
+            <img id="map-image" alt="Hoher Fläming Map">
+            
+            <!-- Helicopter -->
+            <div id="helicopter-container">
+                <div id="helicopter">
+                    <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                      <g transform="translate(50,50)">
+                        <path d="M 0 -25 L -18 15 L 0 5 L 18 15 Z" fill="#d9534f" stroke="#222" stroke-width="3"/>
+                        <circle cx="0" cy="0" r="8" fill="#555" />
+                        <rect x="-3" y="-35" width="6" height="10" fill="#333" />
+                        <rect x="-35" y="-3" width="70" height="6" rx="3" fill="#888" id="main-rotor"/>
+                      </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud-container">
+        <div class="hud-panel">
+            <div class="hud-row">
+                <span class="hud-label">Speed</span>
+                <span class="hud-value" id="speed-display">0.0</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">POIs Visited</span>
+                <span class="hud-value" id="poi-count">0/16</span>
+            </div>
+             <div class="hud-row">
+                <span class="hud-label">Time</span>
+                <span class="hud-value" id="time-display">00:00</span>
+            </div>
+        </div>
+
+        <div class="hud-panel">
+            <div class="hud-row">
+                <span class="hud-label">Heading</span>
+                <span class="hud-value" id="heading-display">0°</span>
+            </div>
+            <div id="compass">
+                <div id="compass-ring">N</div>
+                <div id="compass-needle"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls-container">
+        <div id="joystick-container">
+            <div id="joystick-base"></div>
+            <div id="joystick-handle"></div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-button" id="land-button">Land</button>
+            <button class="action-button secondary visible" id="menu-button" title="Menu">☰</button>
+        </div>
+    </div>
+
+    <!-- Minimap -->
+    <div id="minimap">
+        <canvas id="minimap-canvas"></canvas>
+    </div>
+
+    <!-- Menu -->
+    <div id="menu-container">
+        <div id="menu-header">
+            <h2 id="menu-title">Mission Log</h2>
+            <button id="menu-close">✕</button>
+        </div>
+        <div id="menu-content">
+            <div class="menu-section">
+                <div class="menu-section-title">Flight Statistics</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-distance">0</div>
+                        <div class="stat-label">Distance (km)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-max-speed">0</div>
+                        <div class="stat-label">Max Speed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-landings">0</div>
+                        <div class="stat-label">Landings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-completion">0%</div>
+                        <div class="stat-label">Completion</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="menu-section">
+                <div class="menu-section-title">Points of Interest</div>
+                <div id="poi-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POI Modal -->
+    <div id="poi-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon" id="modal-icon">1</div>
+                <h2 id="poi-modal-title">Point of Interest</h2>
+            </div>
+            <p class="modal-description" id="poi-modal-description"></p>
+            <div class="modal-stats">
+                <div class="modal-stat">
+                    <div class="modal-stat-value" id="modal-visit-time">--:--</div>
+                    <div class="modal-stat-label">Visit Time</div>
+                </div>
+                <div class="modal-stat">
+                    <div class="modal-stat-value" id="modal-poi-number">1/16</div>
+                    <div class="modal-stat-label">Progress</div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-button" id="continue-button">Continue Flying</button>
+                <button class="modal-button secondary" id="next-poi-button">Next POI →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div id="completion-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">🏆</div>
+                <h2>Mission Complete!</h2>
+            </div>
+            <p class="modal-description">
+                Congratulations, pilot! You've successfully explored all 16 points of interest in the Hoher Fläming Nature Park.
+            </p>
+            <div class="modal-stats">
+                <div class="modal-stat">
+                    <div class="modal-stat-value" id="final-time">00:00</div>
+                    <div class="modal-stat-label">Total Time</div>
+                </div>
+                <div class="modal-stat">
+                    <div class="modal-stat-value" id="final-distance">0 km</div>
+                    <div class="stat-label">Distance Flown</div>
+                </div>
+                <div class="modal-stat">
+                    <div class="modal-stat-value" id="final-speed">0</div>
+                    <div class="stat-label">Avg Speed</div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-button" id="restart-button">New Mission</button>
+                <button class="modal-button secondary" id="explore-button">Free Flight</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement Toast -->
+    <div id="achievement-toast" class="achievement-toast">
+        <span class="achievement-icon">🏆</span>
+        <span class="achievement-text" id="achievement-text">Achievement Unlocked!</span>
+    </div>
+
+    <script type="module" src="index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
