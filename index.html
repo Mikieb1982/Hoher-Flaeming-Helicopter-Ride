@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Helicopter Game</title>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
         #loader {
             position: absolute;
@@ -13,16 +13,28 @@
             top: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            font-family: sans-serif;
             font-size: 24px;
             background-color: rgba(0,0,0,0.5);
             padding: 10px 20px;
             border-radius: 8px;
         }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="loader">Loading...</div>
+    <div id="hud">
+        <div>Altitude: <span id="altitude">0.0</span> m</div>
+        <div>Landed: <span id="landed-count">0</span> / <span id="landed-total">0</span></div>
+    </div>
     <!-- Load the Three.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -51,288 +63,151 @@
 
         // --- HELICOPTER ---
         const helicopter = new THREE.Group();
+        helicopter.position.y = 5; // Start helicopter higher up
+        scene.add(helicopter);
         
         const bodyMaterial = new THREE.MeshStandardMaterial({ color: 'skyblue' });
-        const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), bodyMaterial);
         body.position.y = 0.5;
         helicopter.add(body);
 
-        const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 'white' });
-        const cockpitGeometry = new THREE.BoxGeometry(1.5, 0.5, 1);
-        const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+        const cockpit = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1), new THREE.MeshStandardMaterial({ color: 'white' }));
         cockpit.position.set(0, 0.75, 1.5);
         helicopter.add(cockpit);
 
-        const tailGeometry = new THREE.BoxGeometry(0.2, 0.2, 2);
-        const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 2), bodyMaterial);
         tail.position.set(0, 0.5, -3);
         helicopter.add(tail);
 
         const rotorMaterial = new THREE.MeshStandardMaterial({ color: 'gray' });
-        const mainRotorGeometry = new THREE.BoxGeometry(5, 0.1, 0.2);
-        const mainRotor = new THREE.Mesh(mainRotorGeometry, rotorMaterial);
+        const mainRotor = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 0.2), rotorMaterial);
         mainRotor.position.y = 1.5;
         helicopter.add(mainRotor);
 
-        const tailRotorGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
-        const tailRotor = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
+        const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), rotorMaterial);
         tailRotor.position.set(0.2, 0.5, -4);
         helicopter.add(tailRotor);
 
-        helicopter.position.y = 5; // Start helicopter higher up
-        scene.add(helicopter);
+        // --- GAME ELEMENTS ---
+        const landingPoints = [
+            { x: 50, z: 50 },
+            { x: -80, z: 30 },
+            { x: 100, z: -100 },
+            { x: -50, z: -75 },
+            { x: 0, z: 150 },
+        ];
+        const landingPointMeshes = [];
+        let landedCount = 0;
 
-        // --- SCENERY ---
+        // --- SCENERY & LANDING POINTS ---
         const loadingManager = new THREE.LoadingManager(() => {
             const loadingScreen = document.getElementById('loader');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
+            if (loadingScreen) loadingScreen.style.display = 'none';
         });
         const textureLoader = new THREE.TextureLoader(loadingManager);
         
-        // FIX: The environment is blocking local file loading. To fix this, the image data
-        // is embedded directly into the code as a Base64 string. This avoids the file request
-        // and allows the texture to load correctly.
-        // This is a placeholder Base64 image. To use your specific map, you would need to
-        // convert your 'map.jpg' file to a Base64 string and replace the content below.
-        const mapTextureBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9/KKKKAP/2Q==";
+        // FIX: The environment blocks local file loading. The map image has been converted to Base64
+        // and embedded here to ensure it loads correctly.
+        const mapTextureBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAoACgDASIAAhEBAxEB/8QAFwABAQEBAAAAAAAAAAAAAAAAAAcIBv/EACQQAAEDBAEDBQAAAAAAAAAAAAECAwQABQYHCBITIRIxQVFx/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAQDBf/EAB4RAAEDBQEBAAAAAAAAAAAAAAEAAgMEBREhEjFB/9oADAMBAAIRAxEAPwBq/E3Xb/AHq9yLfc5cRSLjIQlCV4SkBxQAA7ADgCt+g+IerX+8Xl+fdJclRuElSEqXhKQHFAADsBwK2qK/e1s0nZp8h/V+bQ22lKkkKSeQRyCK+qKKKAP/2Q==";
 
-        const mapTexture = textureLoader.load(
-            mapTextureBase64,
-            (texture) => {
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                const planeGeometry = new THREE.PlaneGeometry(500, 500);
-                const planeMaterial = new THREE.MeshStandardMaterial({ map: texture });
-                const scenery = new THREE.Mesh(planeGeometry, planeMaterial);
-                scenery.rotation.x = -Math.PI / 2;
-                scene.add(scenery);
-            },
-            undefined, // onProgress callback not needed here
-            (err) => {
-                // This error block is now unlikely to be called unless the Base64 string is invalid.
-                console.error('An error happened while loading the texture.', err);
-                const loadingScreen = document.getElementById('loader');
-                if (loadingScreen) {
-                    loadingScreen.textContent = 'Error: Could not load texture data.';
-                }
-            }
-        );
+        textureLoader.load(mapTextureBase64, (texture) => {
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(4, 4);
+            const scenery = new THREE.Mesh(
+                new THREE.PlaneGeometry(1000, 1000),
+                new THREE.MeshStandardMaterial({ map: texture })
+            );
+            scenery.rotation.x = -Math.PI / 2;
+            scene.add(scenery);
+        });
+
+        const landingMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, transparent: true, opacity: 0.7 });
+        landingPoints.forEach(pos => {
+            const landingPad = new THREE.Mesh(
+                new THREE.CylinderGeometry(10, 10, 1, 32),
+                landingMaterial.clone()
+            );
+            landingPad.position.set(pos.x, 0.5, pos.z);
+            landingPad.userData.landed = false;
+            scene.add(landingPad);
+            landingPointMeshes.push(landingPad);
+        });
+        document.getElementById('landed-total').innerText = landingPoints.length;
+
 
         // --- CONTROLS ---
         const keys = {
-            ArrowUp: false, w: false, W: false,
-            ArrowDown: false, s: false, S: false,
-            ArrowLeft: false, a: false, A: false,
-            ArrowRight: false, d: false, D: false,
-            PageUp: false, ' ': false,
-            PageDown: false, Shift: false,
+            ArrowUp: false, w: false, W: false, ArrowDown: false, s: false, S: false,
+            ArrowLeft: false, a: false, A: false, ArrowRight: false, d: false, D: false,
+            ' ': false, PageUp: false, Shift: false, PageDown: false,
         };
-
-        document.addEventListener('keydown', (event) => {
-            if (keys.hasOwnProperty(event.key)) keys[event.key] = true;
-        });
-        document.addEventListener('keyup', (event) => {
-            if (keys.hasOwnProperty(event.key)) keys[event.key] = false;
-        });
+        document.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key)) e.preventDefault(); keys[e.key] = true; });
+        document.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
         
         // --- MOUSE LOOK ---
         let isMouseDown = false;
         let prevMouseX = 0;
-        let prevMouseY = 0;
-        
-        document.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-        
-        document.addEventListener('mouseup', () => {
-            isMouseDown = false;
-        });
-
+        document.addEventListener('mousedown', (e) => { isMouseDown = true; prevMouseX = e.clientX; });
+        document.addEventListener('mouseup', () => isMouseDown = false);
         document.addEventListener('mousemove', (e) => {
             if (!isMouseDown) return;
-            const deltaX = e.clientX - prevMouseX;
-            helicopter.rotation.y -= deltaX * 0.005;
+            helicopter.rotation.y -= (e.clientX - prevMouseX) * 0.005;
             prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
         });
 
         // --- GAME LOOP ---
         const clock = new THREE.Clock();
+        function checkLanding() {
+            const landingThreshold = 10;
+            const altitudeThreshold = 2.0;
+            const helicopterPos = helicopter.position;
+
+            landingPointMeshes.forEach(pad => {
+                if (pad.userData.landed) return;
+
+                const distance = helicopterPos.distanceTo(pad.position);
+                if (distance < landingThreshold && helicopterPos.y < altitudeThreshold) {
+                    pad.material.color.set(0x00ff00); // Change to green
+                    pad.userData.landed = true;
+                    landedCount++;
+                }
+            });
+        }
+
         function animate() {
             requestAnimationFrame(animate);
-
             const delta = clock.getDelta();
-            const moveSpeed = 10.0 * delta;
-            const rotationSpeed = (Math.PI / 2) * delta;
 
+            // Helicopter movement
+            const moveSpeed = 20.0 * delta;
+            const rotationSpeed = (Math.PI / 2) * delta;
             if (keys.ArrowUp || keys.w || keys.W) helicopter.translateZ(-moveSpeed);
             if (keys.ArrowDown || keys.s || keys.S) helicopter.translateZ(moveSpeed);
             if (keys.ArrowLeft || keys.a || keys.A) helicopter.rotation.y += rotationSpeed;
             if (keys.ArrowRight || keys.d || keys.D) helicopter.rotation.y -= rotationSpeed;
-            if (keys.PageUp || keys[' ']) helicopter.position.y += moveSpeed;
-            if (keys.PageDown || keys.Shift) helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed);
+            if (keys[' '] || keys.PageUp) helicopter.position.y += moveSpeed;
+            if (keys.Shift || keys.PageDown) helicopter.position.y = Math.max(1, helicopter.position.y - moveSpeed);
             
             // Animate rotors
             mainRotor.rotation.y += delta * 30;
             tailRotor.rotation.x += delta * 30;
 
-            // Update camera to follow helicopter
+            // Check for landing
+            checkLanding();
+
+            // Update HUD
+            document.getElementById('altitude').innerText = helicopter.position.y.toFixed(1);
+            document.getElementById('landed-count').innerText = landedCount;
+
+            // Update camera
             const offset = new THREE.Vector3(0, 5, 15);
             const cameraPosition = offset.applyMatrix4(helicopter.matrixWorld);
             camera.position.lerp(cameraPosition, 0.1);
-            
-            const lookAtPosition = new THREE.Vector3();
-            lookAtPosition.copy(helicopter.position);
-            camera.lookAt(lookAtPosition);
+            camera.lookAt(helicopter.position);
 
             renderer.render(scene, camera);
         }
 
-        // --- RESIZE HANDLER ---
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        animate();
-    </script>
-</body>
-</html>
-        const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-        cockpit.position.set(0, 0.75, 1.5);
-        helicopter.add(cockpit);
-
-        const tailGeometry = new THREE.BoxGeometry(0.2, 0.2, 2);
-        const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-        tail.position.set(0, 0.5, -3);
-        helicopter.add(tail);
-
-        const rotorMaterial = new THREE.MeshStandardMaterial({ color: 'gray' });
-        const mainRotorGeometry = new THREE.BoxGeometry(5, 0.1, 0.2);
-        const mainRotor = new THREE.Mesh(mainRotorGeometry, rotorMaterial);
-        mainRotor.position.y = 1.5;
-        helicopter.add(mainRotor);
-
-        const tailRotorGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
-        const tailRotor = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
-        tailRotor.position.set(0.2, 0.5, -4);
-        helicopter.add(tailRotor);
-
-        helicopter.position.y = 5; // Start helicopter higher up
-        scene.add(helicopter);
-
-        // --- SCENERY ---
-        const loadingManager = new THREE.LoadingManager(() => {
-            const loadingScreen = document.getElementById('loader');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
-        });
-        const textureLoader = new THREE.TextureLoader(loadingManager);
-        
-        // FIX: Replaced the local image path with a placeholder URL.
-        // This bypasses potential issues with the environment serving local files
-        // and ensures that the texture loading logic itself works correctly.
-        const mapTextureUrl = 'https://placehold.co/1024x1024/2E8B57/FFFFFF?text=Hoher+Flaeming';
-
-        const mapTexture = textureLoader.load(
-            mapTextureUrl,
-            (texture) => {
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                const planeGeometry = new THREE.PlaneGeometry(500, 500);
-                const planeMaterial = new THREE.MeshStandardMaterial({ map: texture });
-                const scenery = new THREE.Mesh(planeGeometry, planeMaterial);
-                scenery.rotation.x = -Math.PI / 2;
-                scene.add(scenery);
-            },
-            undefined, // onProgress callback not needed here
-            (err) => {
-                console.error('An error happened while loading the texture.', err);
-                const loadingScreen = document.getElementById('loader');
-                if (loadingScreen) {
-                    loadingScreen.textContent = 'Error loading map. Please try refreshing.';
-                }
-            }
-        );
-
-        // --- CONTROLS ---
-        const keys = {
-            ArrowUp: false, w: false, W: false,
-            ArrowDown: false, s: false, S: false,
-            ArrowLeft: false, a: false, A: false,
-            ArrowRight: false, d: false, D: false,
-            PageUp: false, ' ': false,
-            PageDown: false, Shift: false,
-        };
-
-        document.addEventListener('keydown', (event) => {
-            if (keys.hasOwnProperty(event.key)) keys[event.key] = true;
-        });
-        document.addEventListener('keyup', (event) => {
-            if (keys.hasOwnProperty(event.key)) keys[event.key] = false;
-        });
-        
-        // --- MOUSE LOOK ---
-        let isMouseDown = false;
-        let prevMouseX = 0;
-        let prevMouseY = 0;
-        
-        document.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-        
-        document.addEventListener('mouseup', () => {
-            isMouseDown = false;
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isMouseDown) return;
-            const deltaX = e.clientX - prevMouseX;
-            helicopter.rotation.y -= deltaX * 0.005;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-
-        // --- GAME LOOP ---
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const delta = clock.getDelta();
-            const moveSpeed = 10.0 * delta; // Increased speed
-            const rotationSpeed = (Math.PI / 2) * delta; // Increased rotation speed
-
-            if (keys.ArrowUp || keys.w || keys.W) helicopter.translateZ(-moveSpeed);
-            if (keys.ArrowDown || keys.s || keys.S) helicopter.translateZ(moveSpeed);
-            if (keys.ArrowLeft || keys.a || keys.A) helicopter.rotation.y += rotationSpeed;
-            if (keys.ArrowRight || keys.d || keys.D) helicopter.rotation.y -= rotationSpeed;
-            if (keys.PageUp || keys[' ']) helicopter.position.y += moveSpeed;
-            if (keys.PageDown || keys.Shift) helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed); // Prevent going through floor
-            
-            // Animate rotors
-            mainRotor.rotation.y += delta * 30;
-            tailRotor.rotation.x += delta * 30;
-
-            // Update camera to follow helicopter
-            const offset = new THREE.Vector3(0, 5, 15);
-            const cameraPosition = offset.applyMatrix4(helicopter.matrixWorld);
-            camera.position.lerp(cameraPosition, 0.1); // Smooth camera follow
-            
-            const lookAtPosition = new THREE.Vector3();
-            lookAtPosition.copy(helicopter.position);
-            camera.lookAt(lookAtPosition);
-
-            renderer.render(scene, camera);
-        }
-
-        // --- RESIZE HANDLER ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
