@@ -160,6 +160,7 @@ function initThreeScene() {
     state.pois.forEach(poi => {
         const marker = createPOIMarker(poi);
         marker.position.set(poi.x - CONFIG.MAP_WIDTH / 2, -poi.y + CONFIG.MAP_HEIGHT / 2, 0);
+        marker.name = `poi-${poi.id}`;
         state.three.scene.add(marker);
     });
 
@@ -438,7 +439,7 @@ function checkPOIProximity() {
     state.pois.forEach((poi, index) => {
         if (poi.visited) return;
         const distance = Math.hypot(state.helicopter.x - poi.x, state.helicopter.y - poi.y);
-        const marker = state.three.scene?.children.find(c => c.position.x === poi.x - CONFIG.MAP_WIDTH / 2 && c.position.y === -poi.y + CONFIG.MAP_HEIGHT / 2) as THREE.Mesh;
+        const marker = state.three.scene?.getObjectByName(`poi-${poi.id}`) as THREE.Mesh;
 
         if (distance < CONFIG.LANDING_RADIUS) {
             if (distance < minDistance) {
@@ -566,7 +567,6 @@ function landAtPOI() {
     if (!poi.visited) {
         poi.visited = true;
         state.visitedCount++;
-        document.getElementById(`poi-${poi.id}`)?.classList.add('visited');
         const listItem = document.getElementById(`poi-list-${poi.id}`);
         if(listItem) {
             listItem.classList.add('visited');
@@ -675,6 +675,13 @@ function restartGame() {
     dom.poiModal.classList.remove('active');
     resetJoystick();
     // centerCamera();
+
+    // Reset POI marker colors
+    state.three.scene?.children.forEach(child => {
+        if (child instanceof THREE.Mesh && child.geometry instanceof THREE.CylinderGeometry) {
+            (child.material as THREE.MeshBasicMaterial).color.set(0xc94a4a);
+        }
+    });
 }
 
 function freeFlightMode() {
