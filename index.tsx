@@ -188,7 +188,6 @@ function onWindowResize() {
 function init() {
     try {
         initThreeScene();
-        createPOIMarkers();
         populatePOIList();
         setupEventListeners();
         setupMinimap();
@@ -264,7 +263,6 @@ function setupEventListeners() {
     dom.joystickContainer.addEventListener('mousedown', handleJoystickMouseStart);
     document.addEventListener('mousemove', handleJoystickMouseMove);
     document.addEventListener('mouseup', handleJoystickMouseEnd);
-    dom.landButton.addEventListener('click', landAtPOI);
     dom.menuButton.addEventListener('click', toggleMenu);
     dom.menuClose.addEventListener('click', closeMenu);
     dom.continueButton.addEventListener('click', resumeFlight);
@@ -279,7 +277,6 @@ function handleKeyDown(e: KeyboardEvent) {
     if (!state.gameActive) return;
     initAudio();
     state.input.keys.add(e.key.toLowerCase());
-    if ((e.key === 'l' || e.key === 'L') && state.nearbyPOI) landAtPOI();
     if (e.key === 'm' || e.key === 'M') toggleMenu();
     if (e.key === 'Escape') closeMenu();
 }
@@ -578,7 +575,6 @@ function landAtPOI() {
         checkAchievements();
     }
     
-    dom.landButton.classList.remove('visible');
     showPOIModal(poi);
     if (state.visitedCount === 16) setTimeout(showCompletionModal, 1500);
 }
@@ -598,7 +594,6 @@ function resumeFlight() {
     dom.poiModal.classList.remove('active');
     state.gameActive = true;
     state.nearbyPOI = null;
-    document.querySelectorAll('.poi-marker.nearby').forEach(m => m.classList.remove('nearby'));
 }
 
 function navigateToNextPOI() {
@@ -669,7 +664,6 @@ function restartGame() {
     
     state.pois.forEach(poi => {
         poi.visited = false;
-        document.getElementById(`poi-${poi.id}`)?.classList.remove('visited', 'nearby');
         const listItem = document.getElementById(`poi-list-${poi.id}`);
         if(listItem) {
             listItem.classList.remove('visited');
@@ -679,7 +673,6 @@ function restartGame() {
     
     dom.completionModal.classList.remove('active');
     dom.poiModal.classList.remove('active');
-    dom.landButton.classList.remove('visible');
     resetJoystick();
     // centerCamera();
 }
