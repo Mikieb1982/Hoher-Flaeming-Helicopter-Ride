@@ -1,15 +1,17 @@
 /* Reset and Variables */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
 :root {
-    --bg-main: #f4f1e8;
-    --bg-panel: rgba(255, 255, 255, 0.85);
-    --text-primary: #3d352e;
-    --text-secondary: #6b5f55;
-    --accent-primary: #c94a4a;
-    --accent-secondary: #8c7851;
-    --accent-success: #5a9a68;
-    --border-color: rgba(0, 0, 0, 0.1);
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --bg-main: #111;
+    --bg-panel: rgba(0, 20, 40, 0.75);
+    --text-primary: #e0f0ff;
+    --text-secondary: #80a0c0;
+    --accent-primary: #00ffff;
+    --accent-secondary: #ff00ff;
+    --accent-success: #00ff80;
+    --border-color: rgba(0, 255, 255, 0.3);
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.2);
+    --shadow-md: 0 5px 15px rgba(0,0,0,0.3);
 }
 
 * {
@@ -23,7 +25,7 @@ html, body {
     height: 100%;
     width: 100%;
     overflow: hidden;
-    font-family: "Georgia", "Times New Roman", serif;
+    font-family: 'Orbitron', sans-serif;
     background: var(--bg-main);
     color: var(--text-primary);
     position: relative;
@@ -103,67 +105,6 @@ html, body {
     filter: sepia(0.1) brightness(1.05);
 }
 
-/* POI Markers */
-.poi-marker {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    cursor: pointer;
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.poi-marker-inner {
-    width: 32px;
-    height: 32px;
-    background: var(--accent-primary);
-    color: white;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 28px; /* 32px height - 4px total border */
-    font-size: 14px;
-    font-weight: bold;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease;
-}
-
-.poi-marker-label {
-    margin-top: 5px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: normal;
-    white-space: nowrap;
-    box-shadow: var(--shadow-sm);
-    color: var(--text-primary);
-    opacity: 1;
-    transform: translateY(0);
-    transition: all 0.2s ease-in-out;
-    pointer-events: auto;
-}
-
-.poi-marker.nearby .poi-marker-inner {
-    transform: scale(1.2);
-    animation: nearby-pulse 1.5s infinite;
-}
-
-@keyframes nearby-pulse {
-    0%, 100% { box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0 rgba(201, 74, 74, 0.7); }
-    50% { box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 0 8px rgba(201, 74, 74, 0); }
-}
-
-.poi-marker.visited .poi-marker-inner {
-    background: var(--accent-success);
-    transform: scale(0.9);
-}
-
-.poi-marker.visited .poi-marker-label {
-    text-decoration: line-through;
-}
-
 /* Helicopter */
 #helicopter-container {
     position: absolute;
@@ -208,11 +149,12 @@ html, body {
 
 .hud-panel {
     background: var(--bg-panel);
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 10px 15px;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 0 15px var(--accent-primary), inset 0 0 5px var(--accent-primary);
+    text-shadow: 0 0 5px var(--accent-primary);
     pointer-events: auto;
 }
 
@@ -260,18 +202,18 @@ html, body {
 #joystick-container { width: 130px; height: 130px; position: relative; pointer-events: auto; }
 #joystick-base { 
     position: absolute; inset: 0; 
-    background: rgba(255, 255, 255, 0.6);
-    border: 2px solid rgba(0,0,0,0.15);
+    background: rgba(0, 20, 40, 0.6);
+    border: 2px solid var(--border-color);
     border-radius: 50%; 
-    box-shadow: var(--shadow-md), inset 0 2px 4px rgba(0,0,0,0.1); 
+    box-shadow: 0 0 15px var(--accent-primary), inset 0 0 5px var(--accent-primary);
 }
 #joystick-handle { 
     position: absolute; width: 60px; height: 60px; top: 50%; left: 50%; 
     transform: translate(-50%, -50%); 
     background: var(--accent-primary);
-    border: 2px solid rgba(255,255,255,0.5);
+    border: 2px solid var(--accent-primary);
     border-radius: 50%; 
-    box-shadow: var(--shadow-sm); 
+    box-shadow: 0 0 10px var(--accent-primary);
     cursor: grab; touch-action: none; 
 }
 #joystick-handle:active { cursor: grabbing; }
@@ -281,20 +223,22 @@ html, body {
 .action-button { 
     width: 70px; height: 70px; 
     background: var(--accent-primary); 
-    border: 2px solid white;
+    border: 2px solid var(--accent-primary);
     border-radius: 50%; 
     font-size: 16px; font-weight: bold; 
-    color: white; 
+    color: var(--bg-main);
     display: none; 
     justify-content: center; align-items: center; cursor: pointer; 
-    box-shadow: var(--shadow-md); 
+    box-shadow: 0 0 15px var(--accent-primary);
     transition: all 0.2s ease; 
 }
 .action-button.visible { display: flex; }
-.action-button:hover { transform: scale(1.05); }
+.action-button:hover { transform: scale(1.05); box-shadow: 0 0 25px var(--accent-primary); }
 .action-button:active { transform: scale(0.95); }
 .action-button.secondary { 
     background: var(--accent-secondary); 
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 15px var(--accent-secondary);
     width: 55px; height: 55px; font-size: 24px;
 }
 
@@ -325,21 +269,21 @@ html, body {
 /* Modals */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 500; opacity: 0; visibility: hidden; transition: all 0.3s ease; backdrop-filter: blur(5px); }
 .modal.active { opacity: 1; visibility: visible; }
-.modal-content { background: var(--bg-main); border: 1px solid var(--border-color); padding: 30px; border-radius: 12px; width: 90%; max-width: 550px; box-shadow: var(--shadow-lg); transform: scale(0.9); transition: all 0.3s ease; }
+.modal-content { background: var(--bg-panel); border: 1px solid var(--border-color); padding: 30px; border-radius: 12px; width: 90%; max-width: 550px; box-shadow: 0 0 20px var(--accent-primary), inset 0 0 10px var(--accent-primary); text-shadow: 0 0 5px var(--accent-primary); transform: scale(0.9); transition: all 0.3s ease; }
 .modal.active .modal-content { transform: scale(1); }
 .modal-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-.modal-icon { width: 40px; height: 40px; background: var(--accent-primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: white; flex-shrink: 0; }
+.modal-icon { width: 40px; height: 40px; background: var(--accent-primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: var(--bg-main); flex-shrink: 0; box-shadow: 0 0 10px var(--accent-primary); }
 .modal.visited .modal-icon { background: var(--accent-success); }
 .modal h2 { flex: 1; margin: 0; font-size: 24px; }
 .modal-description { color: var(--text-secondary); line-height: 1.7; font-size: 15px; margin-bottom: 25px; max-height: 150px; overflow-y: auto; }
 .modal-stats { display: flex; gap: 15px; margin-bottom: 25px; }
-.modal-stat { flex: 1; text-align: center; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; }
+.modal-stat { flex: 1; text-align: center; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); }
 .modal-stat-value { font-size: 18px; font-weight: bold; }
 .modal-stat-label { font-size: 12px; color: var(--text-secondary); }
 .modal-buttons { display: flex; gap: 15px; justify-content: flex-end; }
-.modal-button { background: var(--accent-primary); color: white; border: none; padding: 12px 25px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; }
-.modal-button:hover { filter: brightness(1.1); }
-.modal-button.secondary { background: var(--accent-secondary); }
+.modal-button { background: var(--accent-primary); color: var(--bg-main); border: none; padding: 12px 25px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 0 10px var(--accent-primary); }
+.modal-button:hover { filter: brightness(1.2); box-shadow: 0 0 15px var(--accent-primary); }
+.modal-button.secondary { background: var(--accent-secondary); box-shadow: 0 0 10px var(--accent-secondary); }
 
 /* Achievements */
 .achievement-toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: var(--accent-success); color: white; padding: 12px 25px; border-radius: 50px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 10px; z-index: 600; transition: top 0.5s ease; }

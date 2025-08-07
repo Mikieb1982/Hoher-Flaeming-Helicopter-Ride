@@ -1,6 +1,7 @@
 
 'use strict';
-import {GoogleGenAI} from "@google/genai";
+import * as THREE from 'three';
+import { GoogleGenAI } from "@google/genai";
 
 // Configuration
 const CONFIG = {
@@ -63,17 +64,20 @@ const state = {
         totalDistance: 0
     },
     achievements: new Set(),
-    minimapCtx: null as CanvasRenderingContext2D | null
+    minimapCtx: null as CanvasRenderingContext2D | null,
+    three: {
+        renderer: null as THREE.WebGLRenderer | null,
+        scene: null as THREE.Scene | null,
+        camera: null as THREE.PerspectiveCamera | null,
+        mapMesh: null as THREE.Mesh | null,
+        helicopterModel: null as THREE.Group | null,
+    }
 };
 
 // DOM Cache
 const dom = {
     loadingScreen: document.getElementById('loading-screen') as HTMLElement,
     mapContainer: document.getElementById('map-container') as HTMLElement,
-    mapViewport: document.getElementById('map-viewport') as HTMLElement,
-    mapImage: document.getElementById('map-image') as HTMLImageElement,
-    helicopterContainer: document.getElementById('helicopter-container') as HTMLElement,
-    mainRotor: document.getElementById('main-rotor') as unknown as SVGElement | null,
     speedDisplay: document.getElementById('speed-display') as HTMLElement,
     poiCount: document.getElementById('poi-count') as HTMLElement,
     timeDisplay: document.getElementById('time-display') as HTMLElement,
@@ -81,7 +85,6 @@ const dom = {
     compassNeedle: document.getElementById('compass-needle') as HTMLElement,
     joystickContainer: document.getElementById('joystick-container') as HTMLElement,
     joystickHandle: document.getElementById('joystick-handle') as HTMLElement,
-    landButton: document.getElementById('land-button') as HTMLButtonElement,
     menuButton: document.getElementById('menu-button') as HTMLButtonElement,
     menuContainer: document.getElementById('menu-container') as HTMLElement,
     menuClose: document.getElementById('menu-close') as HTMLButtonElement,
@@ -120,56 +123,78 @@ function initAudio() {
     console.log("Audio disabled for offline compatibility.");
 }
 
-async function loadImageAndStart() {
-    try {
-        if (!dom.mapImage) throw new Error('Map image element not found in the DOM.');
-        
-        // The browser can be tricky with image loading.
-        // Using fetch gives us more control and better error reporting.
-        const response = await fetch('images/map.jpg');
+function initThreeScene() {
+    const { mapContainer } = dom;
+    if (!mapContainer) return;
 
-        if (!response.ok) {
-            // This will give a clear network error in the console.
-            throw new Error(`Failed to fetch map image. Status: ${response.status} ${response.statusText}`);
-        }
+    // Renderer
+    state.three.renderer = new THREE.WebGLRenderer({ antialias: true });
+    state.three.renderer.setSize(window.innerWidth, window.innerHeight);
+    mapContainer.appendChild(state.three.renderer.domElement);
 
-        const imageBlob = await response.blob();
-        const imageUrl = URL.createObjectURL(imageBlob);
+    // Scene
+    state.three.scene = new THREE.Scene();
+    state.three.scene.background = new THREE.Color(0xf4f1e8);
+    state.three.scene.fog = new THREE.Fog(0xf4f1e8, 1000, 2500);
 
-        // Now, we set the source and wait for the browser to render it.
-        dom.mapImage.onload = () => {
-            URL.revokeObjectURL(imageUrl); // Clean up the blob URL once the image is loaded.
-            onMapLoaded();
-        };
-        dom.mapImage.onerror = (e) => {
-            URL.revokeObjectURL(imageUrl); // Clean up even on error.
-            console.error("Error event on image element after setting blob URL:", e);
-            onMapError();
-        };
-        
-        dom.mapImage.src = imageUrl;
+    // Camera
+    state.three.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+    state.three.camera.position.z = 800;
 
-    } catch (error) {
-        console.error('Failed to load map resource:', error);
-        onMapError(); // Display a user-friendly error on the loading screen.
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    state.three.scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(0, 1000, 500);
+    state.three.scene.add(directionalLight);
+
+    // Helicopter Model
+    state.three.helicopterModel = createHelicopterModel();
+    state.three.scene.add(state.three.helicopterModel);
+
+    // Skybox
+    const skybox = createSkybox();
+    state.three.scene.add(skybox);
+
+    // POI Markers
+    state.pois.forEach(poi => {
+        const marker = createPOIMarker(poi);
+        marker.position.set(poi.x - CONFIG.MAP_WIDTH / 2, -poi.y + CONFIG.MAP_HEIGHT / 2, 0);
+        state.three.scene.add(marker);
+    });
+
+    // Map Plane
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('images/map.jpg', (texture) => {
+        const geometry = new THREE.PlaneGeometry(CONFIG.MAP_WIDTH, CONFIG.MAP_HEIGHT);
+        const material = new THREE.MeshBasicMaterial({ map: texture });
+        state.three.mapMesh = new THREE.Mesh(geometry, material);
+        state.three.scene.add(state.three.mapMesh);
+        onMapLoaded();
+    }, undefined, onMapError);
+
+    window.addEventListener('resize', onWindowResize, false);
+}
+
+function onWindowResize() {
+    if (state.three.camera && state.three.renderer) {
+        state.three.camera.aspect = window.innerWidth / window.innerHeight;
+        state.three.camera.updateProjectionMatrix();
+        state.three.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 }
 
 // Initialize
 function init() {
     try {
-        createPOIMarkers();
+        initThreeScene();
         populatePOIList();
         setupEventListeners();
         setupMinimap();
-        
-        // Start the image loading process. The rest of the game will start from its success callback.
-        loadImageAndStart();
-
     } catch (error) {
         console.error('Initialization error:', error);
         if (dom.loadingScreen) {
-          dom.loadingScreen.innerHTML = `<p>Error initializing game: ${(error as Error).message}</p>`;
+            dom.loadingScreen.innerHTML = `<p>Error initializing game: ${(error as Error).message}</p>`;
         }
     }
 }
@@ -184,7 +209,6 @@ function onMapLoaded() {
         dom.loadingScreen.style.display = 'none';
         state.gameActive = true;
         state.startTime = Date.now();
-        centerCamera();
         requestAnimationFrame(gameLoop);
     }, 500);
 }
@@ -201,30 +225,6 @@ function onMapError() {
     `;
 }
 
-function createPOIMarkers() {
-    state.pois.forEach(poi => {
-        const marker = document.createElement('div');
-        marker.className = 'poi-marker';
-        marker.id = `poi-${poi.id}`;
-        marker.style.left = `${poi.x}px`;
-        marker.style.top = `${poi.y}px`;
-        
-        const inner = document.createElement('div');
-        inner.className = 'poi-marker-inner';
-        marker.appendChild(inner);
-        
-        const label = document.createElement('div');
-        label.className = 'poi-marker-label';
-        label.textContent = poi.name;
-        marker.appendChild(label);
-        
-        marker.addEventListener('click', () => {
-            if (poi.visited) showPOIModal(poi);
-        });
-        
-        dom.mapViewport.appendChild(marker);
-    });
-}
 
 function populatePOIList() {
     dom.poiList.innerHTML = '';
@@ -239,7 +239,7 @@ function populatePOIList() {
             </div>`;
         
         item.addEventListener('click', () => {
-            centerCameraOn(poi.x, poi.y);
+            // centerCameraOn(poi.x, poi.y);
             closeMenu();
         });
         dom.poiList.appendChild(item);
@@ -263,7 +263,6 @@ function setupEventListeners() {
     dom.joystickContainer.addEventListener('mousedown', handleJoystickMouseStart);
     document.addEventListener('mousemove', handleJoystickMouseMove);
     document.addEventListener('mouseup', handleJoystickMouseEnd);
-    dom.landButton.addEventListener('click', landAtPOI);
     dom.menuButton.addEventListener('click', toggleMenu);
     dom.menuClose.addEventListener('click', closeMenu);
     dom.continueButton.addEventListener('click', resumeFlight);
@@ -278,7 +277,6 @@ function handleKeyDown(e: KeyboardEvent) {
     if (!state.gameActive) return;
     initAudio();
     state.input.keys.add(e.key.toLowerCase());
-    if ((e.key === 'l' || e.key === 'L') && state.nearbyPOI) landAtPOI();
     if (e.key === 'm' || e.key === 'M') toggleMenu();
     if (e.key === 'Escape') closeMenu();
 }
@@ -437,24 +435,31 @@ function update(dt: number) {
 function checkPOIProximity() {
     let nearestPOI = null;
     let minDistance = Infinity;
-    for (const poi of state.pois) {
-        if (poi.visited) continue;
+    state.pois.forEach((poi, index) => {
+        if (poi.visited) return;
         const distance = Math.hypot(state.helicopter.x - poi.x, state.helicopter.y - poi.y);
-        if (distance < CONFIG.LANDING_RADIUS && distance < minDistance) {
-            nearestPOI = poi;
-            minDistance = distance;
-        }
-    }
+        const marker = state.three.scene?.children.find(c => c.position.x === poi.x - CONFIG.MAP_WIDTH / 2 && c.position.y === -poi.y + CONFIG.MAP_HEIGHT / 2) as THREE.Mesh;
 
-    if (nearestPOI !== state.nearbyPOI) {
-        if (state.nearbyPOI) document.getElementById(`poi-${state.nearbyPOI.id}`)?.classList.remove('nearby');
-        state.nearbyPOI = nearestPOI;
-        if (nearestPOI) {
-            document.getElementById(`poi-${nearestPOI.id}`)?.classList.add('nearby');
-            dom.landButton.classList.add('visible');
+        if (distance < CONFIG.LANDING_RADIUS) {
+            if (distance < minDistance) {
+                nearestPOI = poi;
+                minDistance = distance;
+            }
+            if (marker) {
+                (marker.children[0] as THREE.Mesh).material.color.set(0x5a9a68);
+            }
         } else {
-            dom.landButton.classList.remove('visible');
+            if (marker) {
+                (marker.children[0] as THREE.Mesh).material.color.set(0xc94a4a);
+            }
         }
+    });
+
+    if (nearestPOI && nearestPOI !== state.nearbyPOI) {
+        state.nearbyPOI = nearestPOI;
+        landAtPOI();
+    } else if (!nearestPOI) {
+        state.nearbyPOI = null;
     }
 }
 
@@ -464,13 +469,42 @@ function updateAudio() {
 }
 
 function render() {
-    // The state.helicopter.x/y represents the center. CSS transform applies to the top-left corner.
-    // We offset by -50% (of the element's size) to correctly center the helicopter.
-    dom.helicopterContainer.style.transform = `translate(calc(${state.helicopter.x}px - 50%), calc(${state.helicopter.y}px - 50%)) rotate(${state.helicopter.angle + 90}deg)`;
-    
-    if (dom.mainRotor) {
-        const rotationSpeed = 0.5 + state.helicopter.speed * 2;
-        dom.mainRotor.style.animationDuration = `${1 / rotationSpeed}s`;
+    if (state.three.renderer && state.three.scene && state.three.camera) {
+        const heli = state.helicopter;
+        const camera = state.three.camera;
+
+        // Smooth camera follow
+        const targetPosition = new THREE.Vector3(
+            heli.x - CONFIG.MAP_WIDTH / 2,
+            -heli.y + CONFIG.MAP_HEIGHT / 2 + 300, // Y-offset for better view
+            800 - heli.speed * 50 // Zoom out with speed
+        );
+        camera.position.lerp(targetPosition, 0.05);
+
+        // Look at the helicopter
+        const lookAtTarget = new THREE.Vector3(
+            heli.x - CONFIG.MAP_WIDTH / 2,
+            -heli.y + CONFIG.MAP_HEIGHT / 2,
+            0
+        );
+        camera.lookAt(lookAtTarget);
+
+        state.three.renderer.render(state.three.scene, state.three.camera);
+    }
+
+    // Update helicopter model
+    if (state.three.helicopterModel) {
+        const heli = state.helicopter;
+        state.three.helicopterModel.position.x = heli.x - CONFIG.MAP_WIDTH / 2;
+        state.three.helicopterModel.position.y = -heli.y + CONFIG.MAP_HEIGHT / 2;
+        state.three.helicopterModel.position.z = 50; // Altitude
+        state.three.helicopterModel.rotation.y = -heli.angle * Math.PI / 180;
+
+        // Animate rotor
+        const mainRotor = state.three.helicopterModel.children[3];
+        if(mainRotor) {
+            mainRotor.rotation.y += state.helicopter.speed * 0.5 + 0.1;
+        }
     }
 
     dom.speedDisplay.textContent = state.helicopter.speed.toFixed(1);
@@ -485,7 +519,6 @@ function render() {
     dom.statLandings.textContent = String(state.stats.landings);
     dom.statCompletion.textContent = `${Math.round((state.visitedCount / 16) * 100)}%`;
 
-    centerCamera();
     renderMinimap();
 }
 
@@ -520,26 +553,6 @@ function renderMinimap() {
     ctx.restore();
 }
 
-function centerCamera() {
-    const viewportWidth = dom.mapContainer.clientWidth;
-    const viewportHeight = dom.mapContainer.clientHeight;
-    const targetX = -state.helicopter.x + viewportWidth / 2;
-    const targetY = -state.helicopter.y + viewportHeight / 2;
-    const minX = -(CONFIG.MAP_WIDTH - viewportWidth);
-    const minY = -(CONFIG.MAP_HEIGHT - viewportHeight);
-    const clampedX = Math.max(minX, Math.min(0, targetX));
-    const clampedY = Math.max(minY, Math.min(0, targetY));
-    dom.mapViewport.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
-}
-
-function centerCameraOn(x: number, y: number) {
-    state.helicopter.x = x;
-    state.helicopter.y = y;
-    state.helicopter.vx = 0;
-    state.helicopter.vy = 0;
-    centerCamera();
-}
-
 // Game Actions
 function landAtPOI() {
     if (!state.nearbyPOI || !state.gameActive) return;
@@ -562,7 +575,6 @@ function landAtPOI() {
         checkAchievements();
     }
     
-    dom.landButton.classList.remove('visible');
     showPOIModal(poi);
     if (state.visitedCount === 16) setTimeout(showCompletionModal, 1500);
 }
@@ -582,7 +594,6 @@ function resumeFlight() {
     dom.poiModal.classList.remove('active');
     state.gameActive = true;
     state.nearbyPOI = null;
-    document.querySelectorAll('.poi-marker.nearby').forEach(m => m.classList.remove('nearby'));
 }
 
 function navigateToNextPOI() {
@@ -597,7 +608,7 @@ function navigateToNextPOI() {
             nearest = poi;
         }
     });
-    centerCameraOn(nearest.x, nearest.y);
+    // centerCameraOn(nearest.x, nearest.y);
     resumeFlight();
 }
 
@@ -653,7 +664,6 @@ function restartGame() {
     
     state.pois.forEach(poi => {
         poi.visited = false;
-        document.getElementById(`poi-${poi.id}`)?.classList.remove('visited', 'nearby');
         const listItem = document.getElementById(`poi-list-${poi.id}`);
         if(listItem) {
             listItem.classList.remove('visited');
@@ -663,9 +673,8 @@ function restartGame() {
     
     dom.completionModal.classList.remove('active');
     dom.poiModal.classList.remove('active');
-    dom.landButton.classList.remove('visible');
     resetJoystick();
-    centerCamera();
+    // centerCamera();
 }
 
 function freeFlightMode() {
@@ -679,6 +688,51 @@ function formatTime(ms: number) {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function createHelicopterModel() {
+    const helicopter = new THREE.Group();
+
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xd9534f, metalness: 0.5, roughness: 0.5 });
+    const bodyGeometry = new THREE.BoxGeometry(30, 15, 15);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    helicopter.add(body);
+
+    const tailBoomGeometry = new THREE.CylinderGeometry(2, 2, 25, 8);
+    const tailBoom = new THREE.Mesh(tailBoomGeometry, bodyMaterial);
+    tailBoom.position.x = -20;
+    tailBoom.rotation.z = Math.PI / 2;
+    helicopter.add(tailBoom);
+
+    const tailRotorGeometry = new THREE.BoxGeometry(1, 10, 1);
+    const tailRotorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+    const tailRotor = new THREE.Mesh(tailRotorGeometry, tailRotorMaterial);
+    tailRotor.position.set(-32, 5, 0);
+    helicopter.add(tailRotor);
+
+    const mainRotorGeometry = new THREE.BoxGeometry(80, 2, 1);
+    const mainRotor = new THREE.Mesh(mainRotorGeometry, tailRotorMaterial);
+    mainRotor.position.y = 10;
+    helicopter.add(mainRotor);
+
+    return helicopter;
+}
+
+function createPOIMarker(poi: typeof POI_DATA[0]) {
+    const markerGroup = new THREE.Group();
+
+    const geometry = new THREE.CylinderGeometry(15, 15, 5, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xc94a4a });
+    const cylinder = new THREE.Mesh(geometry, material);
+    markerGroup.add(cylinder);
+
+    return markerGroup;
+}
+
+function createSkybox() {
+    const skyboxGeometry = new THREE.BoxGeometry(5000, 5000, 5000);
+    const skyboxMaterial = new THREE.MeshBasicMaterial({ color: 0x87ceeb, side: THREE.BackSide });
+    return new THREE.Mesh(skyboxGeometry, skyboxMaterial);
 }
 
 // Since the script is a module and at the end of the body, the DOM is already parsed.
