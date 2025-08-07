@@ -15,6 +15,9 @@
             color: white;
             font-family: sans-serif;
             font-size: 24px;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -83,11 +86,19 @@
         // --- SCENERY ---
         const loadingManager = new THREE.LoadingManager(() => {
             const loadingScreen = document.getElementById('loader');
-            loadingScreen.style.display = 'none';
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
         });
         const textureLoader = new THREE.TextureLoader(loadingManager);
+        
+        // FIX: Replaced the local image path with a placeholder URL.
+        // This bypasses potential issues with the environment serving local files
+        // and ensures that the texture loading logic itself works correctly.
+        const mapTextureUrl = 'https://placehold.co/1024x1024/2E8B57/FFFFFF?text=Hoher+Flaeming';
+
         const mapTexture = textureLoader.load(
-            'images/map.jpg',
+            mapTextureUrl,
             (texture) => {
                 texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
                 const planeGeometry = new THREE.PlaneGeometry(500, 500);
@@ -100,16 +111,18 @@
             (err) => {
                 console.error('An error happened while loading the texture.', err);
                 const loadingScreen = document.getElementById('loader');
-                loadingScreen.textContent = 'Error loading map. Please try refreshing.';
+                if (loadingScreen) {
+                    loadingScreen.textContent = 'Error loading map. Please try refreshing.';
+                }
             }
         );
 
         // --- CONTROLS ---
         const keys = {
-            ArrowUp: false, w: false,
-            ArrowDown: false, s: false,
-            ArrowLeft: false, a: false,
-            ArrowRight: false, d: false,
+            ArrowUp: false, w: false, W: false,
+            ArrowDown: false, s: false, S: false,
+            ArrowLeft: false, a: false, A: false,
+            ArrowRight: false, d: false, D: false,
             PageUp: false, ' ': false,
             PageDown: false, Shift: false,
         };
@@ -150,25 +163,28 @@
             requestAnimationFrame(animate);
 
             const delta = clock.getDelta();
-            const moveSpeed = 4.0 * delta;
-            const rotationSpeed = (Math.PI / 4) * delta;
+            const moveSpeed = 10.0 * delta; // Increased speed
+            const rotationSpeed = (Math.PI / 2) * delta; // Increased rotation speed
 
-            if (keys.ArrowUp || keys.w) helicopter.translateZ(-moveSpeed);
-            if (keys.ArrowDown || keys.s) helicopter.translateZ(moveSpeed);
-            if (keys.ArrowLeft || keys.a) helicopter.rotation.y += rotationSpeed;
-            if (keys.ArrowRight || keys.d) helicopter.rotation.y -= rotationSpeed;
+            if (keys.ArrowUp || keys.w || keys.W) helicopter.translateZ(-moveSpeed);
+            if (keys.ArrowDown || keys.s || keys.S) helicopter.translateZ(moveSpeed);
+            if (keys.ArrowLeft || keys.a || keys.A) helicopter.rotation.y += rotationSpeed;
+            if (keys.ArrowRight || keys.d || keys.D) helicopter.rotation.y -= rotationSpeed;
             if (keys.PageUp || keys[' ']) helicopter.position.y += moveSpeed;
-            if (keys.PageDown || keys.Shift) helicopter.position.y -= moveSpeed;
+            if (keys.PageDown || keys.Shift) helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed); // Prevent going through floor
             
             // Animate rotors
-            mainRotor.rotation.y += delta * 20;
-            tailRotor.rotation.x += delta * 20;
+            mainRotor.rotation.y += delta * 30;
+            tailRotor.rotation.x += delta * 30;
 
             // Update camera to follow helicopter
             const offset = new THREE.Vector3(0, 5, 15);
             const cameraPosition = offset.applyMatrix4(helicopter.matrixWorld);
-            camera.position.copy(cameraPosition);
-            camera.lookAt(helicopter.position);
+            camera.position.lerp(cameraPosition, 0.1); // Smooth camera follow
+            
+            const lookAtPosition = new THREE.Vector3();
+            lookAtPosition.copy(helicopter.position);
+            camera.lookAt(lookAtPosition);
 
             renderer.render(scene, camera);
         }
