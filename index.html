@@ -1,4 +1,4 @@
-1<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -441,4 +441,426 @@
         const FOG_COLOR = 0x87CEEB;
         scene.fog = new THREE.Fog(FOG_COLOR, 150, 450);
         
-        const camera =
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        // ============= LIGHTING =============
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        directionalLight.position.set(100, 100, 50);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.left = -300;
+        directionalLight.shadow.camera.right = 300;
+        directionalLight.shadow.camera.top = 300;
+        directionalLight.shadow.camera.bottom = -300;
+        scene.add(directionalLight);
+        
+        // ============= LOADERS =============
+        const loadingManager = new THREE.LoadingManager();
+        const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+
+
+        // ============= SKYBOX =============
+        const skyboxTexture = cubeTextureLoader.load([
+            'https://threejs.org/examples/textures/cube/skyboxsun25deg/px.jpg',
+            'https://threejs.org/examples/textures/cube/skyboxsun25deg/nx.jpg',
+            'https://threejs.org/examples/textures/cube/skyboxsun25deg/py.jpg',
+            'https://threejs.org/examples/textures/cube/skyboxsun25deg/ny.jpg',
+            'https://threejs.org/examples/textures/cube/skyboxsun25deg/pz.jpg',
+            'https://threejs.org/examples/textures/cube/skyboxsun25deg/nz.jpg',
+        ]);
+        scene.background = skyboxTexture;
+
+        // ============= TERRAIN =============
+        const terrainGeometry = new THREE.PlaneGeometry(CONFIG.MAP_SIZE, CONFIG.MAP_SIZE, 100, 100);
+        
+        const mapUrl = 'https://raw.githubusercontent.com/Mikieb1982/Hoher-Flaeming-Helicopter-Ride/main/images/map.jpg';
+        
+        textureLoader.load(mapUrl,
+            (texture) => {
+                const terrainMaterial = new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide });
+                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+                terrain.rotation.x = -Math.PI / 2;
+                terrain.receiveShadow = true;
+                scene.add(terrain);
+            },
+            undefined,
+            (error) => {
+                console.error('Map image could not be loaded.', error);
+                const terrainMaterial = new THREE.MeshStandardMaterial({ color: 0x3a8b3a, side: THREE.DoubleSide });
+                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+                terrain.rotation.x = -Math.PI / 2;
+                terrain.receiveShadow = true;
+                scene.add(terrain);
+            }
+        );
+
+        // ============= HELICOPTER =============
+        const helicopter = new THREE.Group();
+        const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xdc3545, metalness: 0.4, roughness: 0.5 });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 4), bodyMaterial);
+        body.position.y = 0.75;
+        body.castShadow = true;
+        helicopter.add(body);
+
+        const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0xadd8e6, opacity: 0.5, transparent: true, metalness: 0.1, roughness: 0.2 });
+        const cockpit = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), cockpitMaterial);
+        cockpit.position.set(0, 1, 1.5);
+        cockpit.scale.set(0.9, 0.7, 1.2);
+        helicopter.add(cockpit);
+
+        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.4, 3), bodyMaterial);
+        tail.position.set(0, 0.6, -3);
+        tail.rotation.x = Math.PI / 2;
+        tail.castShadow = true;
+        helicopter.add(tail);
+
+        const rotorMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.8, roughness: 0.5 });
+        const mainRotorGroup = new THREE.Group();
+        const mainRotor = new THREE.Mesh(new THREE.BoxGeometry(10, 0.1, 0.4), rotorMaterial);
+        mainRotorGroup.add(mainRotor);
+        const mainRotor2 = mainRotor.clone();
+        mainRotor2.rotation.y = Math.PI / 2;
+        mainRotorGroup.add(mainRotor2);
+        mainRotorGroup.position.y = 2;
+        helicopter.add(mainRotorGroup);
+
+        const tailRotorGroup = new THREE.Group();
+        const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.1), rotorMaterial);
+        tailRotorGroup.add(tailRotor);
+        tailRotorGroup.position.set(0.3, 0.6, -4.5);
+        helicopter.add(tailRotorGroup);
+        
+        helicopter.position.set(145, 10, -50); // Start at Bad Belzig
+        scene.add(helicopter);
+
+        // ============= POI MARKERS =============
+        const poiMeshes = [];
+        const unvisitedFlagMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
+        const visitedFlagMaterial = new THREE.MeshStandardMaterial({ color: 0x28a745, side: THREE.DoubleSide });
+
+        POI_DATA.forEach(poi => {
+            const group = new THREE.Group();
+            
+            const platform = new THREE.Mesh(
+                new THREE.CylinderGeometry(5, 5, 0.5, 16),
+                new THREE.MeshStandardMaterial({ color: 0xcccccc })
+            );
+            platform.receiveShadow = true;
+            group.add(platform);
+
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.2, 0.2, 10),
+                new THREE.MeshStandardMaterial({ color: 0x666666 })
+            );
+            pole.position.y = 5;
+            pole.castShadow = true;
+            group.add(pole);
+
+            const flag = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), unvisitedFlagMaterial.clone());
+            flag.position.set(2, 9, 0);
+            group.add(flag);
+            
+            group.position.set(poi.x, 0.25, poi.z);
+            group.userData = { poi: poi, flag: flag };
+            scene.add(group);
+            poiMeshes.push(group);
+        });
+
+        // ============= EVENT LISTENERS =============
+        const setupEventListeners = () => {
+            // Keyboard
+            document.addEventListener('keydown', (e) => {
+                if (gameState.gamePaused) return;
+                const key = e.key.toLowerCase();
+                if (key === 'arrowup' || key === 'w') gameState.keys['forward'] = true;
+                if (key === 'arrowdown' || key === 's') gameState.keys['backward'] = true;
+                if (key === 'arrowleft' || key === 'a') gameState.keys['left'] = true;
+                if (key === 'arrowright' || key === 'd') gameState.keys['right'] = true;
+                if (key === ' ') { gameState.keys['up'] = true; e.preventDefault(); }
+                if (key === 'shift') gameState.keys['down'] = true;
+                if (key === 'l') handleLanding();
+            });
+            document.addEventListener('keyup', (e) => {
+                const key = e.key.toLowerCase();
+                if (key === 'arrowup' || key === 'w') gameState.keys['forward'] = false;
+                if (key === 'arrowdown' || key === 's') gameState.keys['backward'] = false;
+                if (key === 'arrowleft' || key === 'a') gameState.keys['left'] = false;
+                if (key === 'arrowright' || key === 'd') gameState.keys['right'] = false;
+                if (key === ' ') gameState.keys['up'] = false;
+                if (key === 'shift') gameState.keys['down'] = false;
+            });
+
+            // Touch - Joystick
+            const joystick = DOMElements.joystick;
+            const handle = DOMElements.joystickHandle;
+            const maxJoystickDist = joystick.offsetWidth / 2 - handle.offsetWidth / 2;
+
+            joystick.addEventListener('touchstart', (e) => {
+                gameState.touch.joystick.active = true;
+                updateJoystick(e.touches[0]);
+                e.preventDefault();
+            });
+            joystick.addEventListener('touchmove', (e) => {
+                if (gameState.touch.joystick.active) {
+                    updateJoystick(e.touches[0]);
+                }
+                e.preventDefault();
+            });
+            joystick.addEventListener('touchend', (e) => {
+                gameState.touch.joystick.active = false;
+                gameState.touch.joystick.x = 0;
+                gameState.touch.joystick.y = 0;
+                handle.style.transform = `translate(-50%, -50%)`;
+            });
+
+            function updateJoystick(touch) {
+                const rect = joystick.getBoundingClientRect();
+                let x = touch.clientX - rect.left - joystick.offsetWidth / 2;
+                let y = touch.clientY - rect.top - joystick.offsetHeight / 2;
+                const dist = Math.sqrt(x*x + y*y);
+
+                if (dist > maxJoystickDist) {
+                    x = (x / dist) * maxJoystickDist;
+                    y = (y / dist) * maxJoystickDist;
+                }
+
+                handle.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+                gameState.touch.joystick.x = x / maxJoystickDist;
+                gameState.touch.joystick.y = y / maxJoystickDist;
+            }
+
+            // Touch - Buttons
+            DOMElements.upButton.addEventListener('touchstart', (e) => { gameState.touch.up = true; e.preventDefault(); });
+            DOMElements.upButton.addEventListener('touchend', (e) => { gameState.touch.up = false; });
+            DOMElements.downButton.addEventListener('touchstart', (e) => { gameState.touch.down = true; e.preventDefault(); });
+            DOMElements.downButton.addEventListener('touchend', (e) => { gameState.touch.down = false; });
+            
+            // General
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // UI Listeners
+            DOMElements.landButton.addEventListener('click', handleLanding);
+            DOMElements.menuToggle.addEventListener('click', () => DOMElements.menuContainer.classList.add('open'));
+            DOMElements.menuClose.addEventListener('click', () => DOMElements.menuContainer.classList.remove('open'));
+            DOMElements.modalCloseButton.addEventListener('click', closeInfoPanel);
+        };
+        
+        // ============= UPDATE FUNCTIONS =============
+        function updateHelicopter(delta) {
+            // Combine keyboard and touch inputs
+            let thrustInput = -gameState.touch.joystick.y;
+            let turnInput = -gameState.touch.joystick.x;
+            let climbInput = (gameState.touch.up ? 1 : 0) - (gameState.touch.down ? 1 : 0);
+
+            if (gameState.keys['forward']) thrustInput = 1;
+            if (gameState.keys['backward']) thrustInput = -0.5;
+            if (gameState.keys['left']) turnInput = 1;
+            if (gameState.keys['right']) turnInput = -1;
+            if (gameState.keys['up']) climbInput = 1;
+            if (gameState.keys['down']) climbInput = -1;
+
+            let thrust = thrustInput * CONFIG.MOVEMENT_SPEED;
+            let turn = turnInput * CONFIG.TURN_SPEED;
+            let climb = climbInput * CONFIG.CLIMB_SPEED;
+            
+            helicopter.rotation.y += turn * delta;
+            
+            const forward = new THREE.Vector3(0, 0, 1);
+            forward.applyQuaternion(helicopter.quaternion);
+            gameState.velocity.add(forward.multiplyScalar(-thrust * delta));
+            
+            gameState.velocity.y += climb * delta;
+            gameState.velocity.multiplyScalar(0.96); // Drag
+            
+            helicopter.position.add(gameState.velocity.clone().multiplyScalar(delta));
+            
+            if (helicopter.position.y < 1) { helicopter.position.y = 1; gameState.velocity.y = 0; }
+            if (helicopter.position.y > 200) { helicopter.position.y = 200; gameState.velocity.y = 0; }
+            
+            const boundary = CONFIG.MAP_SIZE / 2;
+            helicopter.position.x = Math.max(-boundary, Math.min(boundary, helicopter.position.x));
+            helicopter.position.z = Math.max(-boundary, Math.min(boundary, helicopter.position.z));
+            
+            gameState.altitude = helicopter.position.y;
+            gameState.speed = Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10;
+            
+            helicopter.rotation.z = -turn * 0.3 - gameState.velocity.x * 0.01;
+            helicopter.rotation.x = thrustInput * 0.2 - gameState.velocity.z * 0.01;
+            
+            mainRotorGroup.rotation.y += delta * 30;
+            tailRotorGroup.rotation.x += delta * 40;
+        }
+        
+        function updateCamera() {
+            const offset = new THREE.Vector3(0, CONFIG.CAMERA_HEIGHT, CONFIG.CAMERA_DISTANCE);
+            offset.applyQuaternion(helicopter.quaternion);
+            const targetPosition = helicopter.position.clone().add(offset);
+            camera.position.lerp(targetPosition, 0.1);
+            camera.lookAt(helicopter.position);
+        }
+        
+        function checkPOIs() {
+            gameState.nearPOI = null;
+            let closestDist = Infinity;
+
+            poiMeshes.forEach(mesh => {
+                const poi = mesh.userData.poi;
+                if (poi.visited) {
+                    mesh.userData.flag.material.emissive.setHex(0x000000);
+                    return;
+                };
+
+                const distance = helicopter.position.distanceTo(mesh.position);
+                if (distance < CONFIG.LANDING_DISTANCE && helicopter.position.y < CONFIG.LANDING_HEIGHT) {
+                    if (distance < closestDist) {
+                        gameState.nearPOI = poi;
+                        closestDist = distance;
+                    }
+                }
+                
+                // Pulsing effect for nearby POIs
+                if (distance < CONFIG.LANDING_DISTANCE * 2) {
+                    const pulse = (Math.sin(Date.now() * 0.005) + 1) / 4; // 0 to 0.5
+                    mesh.userData.flag.material.emissive.setHex(0xffc107);
+                    mesh.userData.flag.material.emissiveIntensity = pulse;
+                } else {
+                    mesh.userData.flag.material.emissive.setHex(0x000000);
+                }
+            });
+            
+            DOMElements.landButton.classList.toggle('visible', !!gameState.nearPOI);
+        }
+        
+        function handleLanding() {
+            if (gameState.nearPOI) {
+                const poi = gameState.nearPOI;
+                poi.visited = true;
+                gameState.visitedCount++;
+                
+                const poiMesh = poiMeshes.find(m => m.userData.poi.id === poi.id);
+                if (poiMesh) {
+                    poiMesh.userData.flag.material = visitedFlagMaterial.clone();
+                }
+                
+                updatePOIList();
+                showInfoPanel(poi);
+                
+                if (gameState.visitedCount === POI_DATA.length) {
+                    setTimeout(() => showMessage("🎉 Mission Complete! All POIs discovered!"), 2000);
+                }
+            }
+        }
+
+        function updateHUD() {
+            DOMElements.altitude.textContent = `${Math.round(gameState.altitude)}m`;
+            DOMElements.speed.textContent = `${Math.round(gameState.speed)}km/h`;
+            DOMElements.visited.textContent = `${gameState.visitedCount}/${POI_DATA.length}`;
+        }
+        
+        function updatePOIList() {
+            DOMElements.poiList.innerHTML = '';
+            POI_DATA.forEach(poi => {
+                const div = document.createElement('div');
+                div.className = 'poi-item' + (poi.visited ? ' visited' : '');
+                div.innerHTML = `
+                    <div class="poi-item-id">${poi.id}</div>
+                    <div class="poi-item-name">${poi.name}</div>
+                    ${poi.visited ? '<div class="poi-item-status">✓</div>' : ''}
+                `;
+                div.onclick = () => {
+                    const poiMesh = poiMeshes.find(m => m.userData.poi.id === poi.id);
+                    if (poiMesh) {
+                        camera.lookAt(poiMesh.position);
+                        DOMElements.menuContainer.classList.remove('open');
+                    }
+                };
+                DOMElements.poiList.appendChild(div);
+            });
+        }
+        
+        let messageTimeout;
+        function showMessage(text, duration = 3000) {
+            DOMElements.messageToast.textContent = text;
+            DOMElements.messageToast.classList.add('show');
+            clearTimeout(messageTimeout);
+            if (duration > 0) {
+                messageTimeout = setTimeout(() => {
+                    DOMElements.messageToast.classList.remove('show');
+                }, duration);
+            }
+        }
+        
+        function showInfoPanel(poi) {
+            gameState.gamePaused = true;
+            DOMElements.modalTitle.textContent = `${poi.id}. ${poi.name}`;
+            DOMElements.modalDescription.textContent = poi.description;
+            DOMElements.poiModal.classList.add('active');
+            DOMElements.poiModal.classList.toggle('visited', poi.visited);
+            const icon = DOMElements.poiModal.querySelector('.modal-icon');
+            icon.textContent = poi.visited ? '✓' : poi.id;
+        }
+        
+        function closeInfoPanel() {
+            gameState.gamePaused = false;
+            DOMElements.poiModal.classList.remove('active');
+        }
+
+        // ============= GAME LOOP =============
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            
+            if (!gameState.gamePaused) {
+                updateHelicopter(delta);
+                checkPOIs();
+            }
+            updateCamera();
+            updateHUD();
+            
+            renderer.render(scene, camera);
+        }
+
+        // ============= INITIALIZATION =============
+        function init() {
+            DOMElements.loadingScreen.classList.add('hidden');
+            DOMElements.hud.style.display = 'flex';
+            DOMElements.controls.style.display = 'flex';
+            
+            updatePOIList();
+            setupEventListeners();
+            
+            showMessage('Welcome to Hoher Fläming! Use controls to fly.', 5000);
+            
+            animate();
+        }
+
+        loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+            const progress = itemsLoaded / itemsTotal;
+            DOMElements.loadingBarFill.style.width = `${progress * 100}%`;
+        };
+        loadingManager.onLoad = () => {
+             // A small delay to ensure assets are fully ready and avoid stutter
+            setTimeout(init, 500);
+        };
+    </script>
+</body>
+</html>
+
