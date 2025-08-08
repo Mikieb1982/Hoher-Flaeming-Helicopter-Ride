@@ -125,13 +125,12 @@
             // Use a material that reacts to light to show the terrain shape
             const groundMaterial = new THREE.MeshStandardMaterial({ 
                 color: 0x3c692f, // A more natural, darker green
-                wireframe: false // Set to true to debug the geometry
+                wireframe: false 
             });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-            ground.rotation.x = -Math.PI / 2; // Lay the plane flat on the XZ axis
             ground.receiveShadow = true;
 
-            // === START OF TERRAIN GENERATION LOGIC ===
+            // === START OF TERRAIN GENERATION LOGIC (CORRECTED) ===
             const simplex = new SimplexNoise();
             const positions = ground.geometry.attributes.position;
 
@@ -142,22 +141,29 @@
             // ---------------------------------------------
 
             for (let i = 0; i < positions.count; i++) {
-                // Get the original vertex position (before the plane is rotated)
+                // A PlaneGeometry is created in the XY plane.
+                // We will rotate it to lie flat on the XZ plane.
+                // So, the original vertex 'x' becomes the world 'x'.
+                // The original vertex 'y' becomes the world 'z'.
+                // The original vertex 'z' (which is 0) will be modified to become the world 'y' (height).
                 const x = positions.getX(i);
-                const z = positions.getZ(i); // In a PlaneGeometry, this is the 'depth' coordinate
+                const y_as_z = positions.getY(i); // This vertex y will be our world z coordinate
 
                 // 1. Generate Hills using Simplex Noise
-                // We use the x and z coordinates to get a 2D noise value which determines the height.
-                const noiseVal = simplex.noise2D(x * hillFrequency, z * hillFrequency);
+                const noiseVal = simplex.noise2D(x * hillFrequency, y_as_z * hillFrequency);
                 const height = noiseVal * hillHeight;
 
                 // 2. Apply Curvature
-                // We create a parabolic curve that makes the terrain drop off as it gets further away (larger z).
-                const curve = z * z * curveStrength;
+                // We create a parabolic curve that makes the terrain drop off as it gets further away.
+                const curve = y_as_z * y_as_z * curveStrength;
 
-                // Apply the calculated height and curve to the Y-coordinate (the 'up' direction in our scene).
-                positions.setY(i, height - curve);
+                // Apply the calculated height and curve to the Z-coordinate of the vertex.
+                // After rotation, this z-coordinate will point "up" in the world (the Y-axis).
+                positions.setZ(i, height - curve);
             }
+
+            // Rotate the plane to be flat on the ground (XZ plane)
+            ground.rotation.x = -Math.PI / 2;
 
             // Important: Tell Three.js that we've changed the geometry's vertices
             ground.geometry.attributes.position.needsUpdate = true;
@@ -238,3 +244,5 @@
 </body>
 </html>
 
+The main fix was to change which vertex coordinates were used for the noise calculation and which were modified for the height. I also moved the ground.rotation.x call to after the vertex manipulation to make the logic clearer.
+This should now give you the rolling, curved landscape you were looking for. Please give it a try and let me know how it goes.
