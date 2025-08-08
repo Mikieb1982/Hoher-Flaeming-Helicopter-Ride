@@ -518,51 +518,51 @@
         scene.add(sun);
 
         // ============= TERRAIN =============
-        const textureLoader = new THREE.TextureLoader();
-        
-        // Create terrain with map texture
+        // Create terrain geometry first
         const terrainGeometry = new THREE.PlaneGeometry(CONFIG.MAP_SIZE, CONFIG.MAP_SIZE, 50, 50);
         
-        // Try to load the map image, fallback to colored terrain if it fails
+        // Add some hills to the geometry
+        const vertices = terrainGeometry.attributes.position.array;
+        for (let i = 0; i < vertices.length; i += 3) {
+            const x = vertices[i];
+            const y = vertices[i + 1];
+            vertices[i + 2] = Math.sin(x * 0.02) * Math.cos(y * 0.02) * 5 + Math.random() * 1;
+        }
+        terrainGeometry.computeVertexNormals();
+        
+        // Create terrain with green material as default
+        const terrainMaterial = new THREE.MeshLambertMaterial({
+            color: 0x3a8b3a,
+            side: THREE.DoubleSide
+        });
+        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        terrain.rotation.x = -Math.PI / 2;
+        terrain.receiveShadow = true;
+        scene.add(terrain);
+        
+        // Try to load map texture after terrain is created
+        const textureLoader = new THREE.TextureLoader();
         const mapUrl = 'https://raw.githubusercontent.com/Mikieb1982/Hoher-Flaeming-Helicopter-Ride/main/images/map.jpg';
         
+        // Attempt to load texture but don't block game start
         textureLoader.load(
             mapUrl,
             // Success callback
             (texture) => {
+                console.log('Map texture loaded successfully');
                 texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                const terrainMaterial = new THREE.MeshLambertMaterial({
+                terrain.material = new THREE.MeshLambertMaterial({
                     map: texture,
                     side: THREE.DoubleSide
                 });
-                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-                terrain.rotation.x = -Math.PI / 2;
-                terrain.receiveShadow = true;
-                scene.add(terrain);
             },
             // Progress callback
-            undefined,
-            // Error callback - use fallback green terrain
+            (xhr) => {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            // Error callback
             (error) => {
-                console.log('Map image not available, using procedural terrain');
-                
-                // Add some hills to the geometry
-                const vertices = terrainGeometry.attributes.position.array;
-                for (let i = 0; i < vertices.length; i += 3) {
-                    const x = vertices[i];
-                    const y = vertices[i + 1];
-                    vertices[i + 2] = Math.sin(x * 0.02) * Math.cos(y * 0.02) * 5 + Math.random() * 1;
-                }
-                terrainGeometry.computeVertexNormals();
-                
-                const terrainMaterial = new THREE.MeshLambertMaterial({
-                    color: 0x3a8b3a,
-                    side: THREE.DoubleSide
-                });
-                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-                terrain.rotation.x = -Math.PI / 2;
-                terrain.receiveShadow = true;
-                scene.add(terrain);
+                console.log('Map texture could not be loaded, using green terrain');
             }
         );
 
