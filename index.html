@@ -248,6 +248,17 @@
     </div>
 
     <script>
+        // Add error handling
+        window.addEventListener('error', (e) => {
+            console.error('Error:', e.error);
+            // Try to hide loader and show error
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.innerHTML = '<div>Error loading game. Please refresh the page.</div>';
+            }
+        });
+        
+        try {
         // ============= CONFIGURATION =============
         const CONFIG = {
             MOVEMENT_SPEED: 30,
@@ -568,6 +579,8 @@
 
         // ============= HELICOPTER =============
         const helicopter = new THREE.Group();
+        let mainRotorGroup;  // Declare these at a higher scope
+        let tailRotorGroup;
         
         // Body
         const bodyGeometry = new THREE.BoxGeometry(2, 1.5, 4);
@@ -603,7 +616,7 @@
         helicopter.add(tail);
         
         // Main Rotor
-        const mainRotorGroup = new THREE.Group();
+        mainRotorGroup = new THREE.Group();
         const rotorGeometry = new THREE.BoxGeometry(10, 0.1, 0.4);
         const rotorMaterial = new THREE.MeshPhongMaterial({
             color: 0x444444
@@ -619,7 +632,7 @@
         helicopter.add(mainRotorGroup);
         
         // Tail Rotor
-        const tailRotorGroup = new THREE.Group();
+        tailRotorGroup = new THREE.Group();
         const tailRotorGeometry = new THREE.BoxGeometry(0.1, 1.5, 0.1);
         const tailRotor = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
         tailRotorGroup.add(tailRotor);
@@ -630,6 +643,9 @@
         helicopter.position.set(145, 10, -50);
         scene.add(helicopter);
 
+        // ============= CLOUDS =============
+        const clouds = [];
+        
         // ============= POI MARKERS =============
         const poiMeshes = [];
         
@@ -1077,27 +1093,35 @@
         }
 
         // ============= INITIALIZATION =============
-        function init() {
-            // Hide loader
-            document.getElementById('loader').style.display = 'none';
-            
-            // Show UI
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('controls').style.display = 'block';
-            document.getElementById('poi-list').style.display = 'block';
-            
-            // Initialize POI list
-            updatePOIList();
-            
-            // Show welcome message
-            showMessage('Welcome to Hoher Fläming! Explore all 16 POIs!', 5000);
-            
-            // Start game loop
-            animate();
+        // Start the game immediately when the page loads
+        window.addEventListener('load', () => {
+            try {
+                // Hide loader
+                document.getElementById('loader').style.display = 'none';
+                
+                // Show UI
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('controls').style.display = 'block';
+                document.getElementById('poi-list').style.display = 'block';
+                
+                // Initialize POI list
+                updatePOIList();
+                
+                // Show welcome message
+                showMessage('Welcome to Hoher Fläming! Explore all 16 POIs!', 5000);
+                
+                // Start game loop
+                animate();
+            } catch (error) {
+                console.error('Initialization error:', error);
+                document.getElementById('loader').innerHTML = '<div>Error: ' + error.message + '</div>';
+            }
+        });
+        
+        } catch (error) {
+            console.error('Setup error:', error);
+            document.getElementById('loader').innerHTML = '<div>Error: ' + error.message + '</div>';
         }
-
-        // Start after a short delay
-        setTimeout(init, 1000);
-    <script src="script.js"></script>
+    </script>
 </body>
 </html>
