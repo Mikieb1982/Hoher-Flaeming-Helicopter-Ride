@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoher Fläming Helicopter Explorer</title>
+    <!-- Load Three.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
+        /* General styles */
         * {
             margin: 0;
             padding: 0;
@@ -21,7 +23,8 @@
         canvas {
             display: block;
         }
-        
+
+        /* UI Elements Styling */
         #loader {
             position: absolute;
             left: 50%;
@@ -52,7 +55,7 @@
         #hud h3 {
             margin: 0 0 10px 0;
             font-size: 18px;
-            color: #FFD700;
+            color: #FFD700; /* Gold color for heading */
         }
         
         .hud-item {
@@ -63,7 +66,7 @@
         
         .hud-value {
             font-weight: bold;
-            color: #00FF00;
+            color: #00FF00; /* Green for values */
         }
         
         #controls {
@@ -132,7 +135,7 @@
         }
         
         .poi-item.visited {
-            color: #00FF00;
+            color: #00FF00; /* Green for visited POIs */
             text-decoration: line-through;
         }
         
@@ -151,6 +154,7 @@
             display: none;
             z-index: 500;
         }
+
         #info-panel {
             position: absolute;
             top: 50%;
@@ -197,6 +201,7 @@
     </style>
 </head>
 <body>
+    <!-- UI Elements -->
     <div id="loader">
         <div>Loading Hoher Fläming...</div>
         <div style="margin-top: 10px; font-size: 14px;">Preparing helicopter...</div>
@@ -204,22 +209,10 @@
     
     <div id="hud" style="display: none;">
         <h3>Flight Status</h3>
-        <div class="hud-item">
-            <span>Altitude:</span>
-            <span class="hud-value" id="altitude">0</span> m
-        </div>
-        <div class="hud-item">
-            <span>Speed:</span>
-            <span class="hud-value" id="speed">0</span> km/h
-        </div>
-        <div class="hud-item">
-            <span>Heading:</span>
-            <span class="hud-value" id="heading">N</span>
-        </div>
-        <div class="hud-item">
-            <span>POIs Visited:</span>
-            <span class="hud-value"><span id="visited">0</span>/16</span>
-        </div>
+        <div class="hud-item"><span>Altitude:</span><span class="hud-value" id="altitude">0</span> m</div>
+        <div class="hud-item"><span>Speed:</span><span class="hud-value" id="speed">0</span> km/h</div>
+        <div class="hud-item"><span>Heading:</span><span class="hud-value" id="heading">N</span></div>
+        <div class="hud-item"><span>POIs Visited:</span><span class="hud-value"><span id="visited">0</span>/16</span></div>
     </div>
     
     <div id="controls" style="display: none;">
@@ -248,880 +241,286 @@
     </div>
 
     <script>
-        // Add error handling
-        window.addEventListener('error', (e) => {
-            console.error('Error:', e.error);
-            // Try to hide loader and show error
-            const loader = document.getElementById('loader');
-            if (loader) {
-                loader.innerHTML = '<div>Error loading game. Please refresh the page.</div>';
-            }
-        });
-        
+        // Main game script
         try {
-        // ============= CONFIGURATION =============
-        const CONFIG = {
-            MOVEMENT_SPEED: 30,
-            TURN_SPEED: 1.5,
-            CLIMB_SPEED: 20,
-            CAMERA_DISTANCE: 30,
-            CAMERA_HEIGHT: 15,
-            LANDING_DISTANCE: 10,
-            LANDING_HEIGHT: 5,
-            MAP_SIZE: 500
-        };
+            // ============= CONFIGURATION =============
+            const CONFIG = {
+                MOVEMENT_SPEED: 30,
+                TURN_SPEED: 1.5,
+                CLIMB_SPEED: 20,
+                CAMERA_DISTANCE: 30,
+                CAMERA_HEIGHT: 15,
+                LANDING_DISTANCE: 15, // Increased landing distance
+                LANDING_HEIGHT: 5,
+                MAP_SIZE: 500
+            };
 
-        // State for pausing when info panel is open
-        let gamePaused = false;
+            let gamePaused = false;
 
-        // ============= POI DATA =============
-        // Positions adjusted to match actual map locations (based on 500x500 map size)
-        const POI_DATA = [
-            { 
-                id: 1, 
-                name: "Stadt und Burg Ziesar", 
-                x: -180, z: -190, 
-                visited: false,
-                description: "Auf der Burg Ziesar befindet sich das Museum für brandenburgische Kirchen- und Kulturgeschichte des Mittelalters. Der sehr gut erhaltene Burgfried und die Schlosskapelle bieten einen weiten Blick über den Ziesarer Kiez."
-            },
-            { 
-                id: 2, 
-                name: "Gutspark Dahlen", 
-                x: -80, z: -150, 
-                visited: false,
-                description: "Der Gutspark Dahlen ist ein Waldstück seltener botanischer Kunst. Spaziergänge um den Schwanensee verzaubern die Besucher. Der Bauerngarten mit Kultur- und Duftpflanzen kann besucht werden."
-            },
-            { 
-                id: 3, 
-                name: "Klein Briesener Bach", 
-                x: 20, z: -170, 
-                visited: false,
-                description: "Der Artesische Brunnen im Naturschutzgebiet Klein Briesener Bach - hier steigt das Wasser nur durch den Erd-Eigendruck hervor und wird durch eine Rinne dem Briesenfließ zugeführt."
-            },
-            { 
-                id: 4, 
-                name: "Paradies Dippmannsdorf", 
-                x: 140, z: -160, 
-                visited: false,
-                description: "Aus einigen Dutzend Quellen sprudelt glasklares Wasser, das die Mühlenbäche speist. Der aus Buchen, Eichen und Birken bestehende Quellkopf wurde begehbar erschlossen."
-            },
-            { 
-                id: 5, 
-                name: "Töpferort Görzke", 
-                x: -185, z: -80, 
-                visited: false,
-                description: "Ein Besuch der kleinen Museen und des Handwerkerhofs, ein Bummel entlang der Bauernhöfe und Einkaufsmöglichkeiten in fünf Töpfereien erwarten die Besucher des Flämingdorfes."
-            },
-            { 
-                id: 6, 
-                name: "Hagelberg", 
-                x: 15, z: -20, 
-                visited: false,
-                description: "Der Hagelberg, ein echter 'Zweitausender' (200,3m), lädt zum Eintrag ins Gipfelbuch ein. Für den 'Aufstieg' zum Gipfelkreuz wird man mit einem schönen Blick über die Fläminglandschaft belohnt."
-            },
-            { 
-                id: 7, 
-                name: "Bad Belzig mit Burg Eisenhardt", 
-                x: 145, z: -50, 
-                visited: false,
-                description: "Auf der komplett erhaltenen Burg kann die 1000-jährige Geschichte der Stadt hautnah erkundet werden. Vom Butterturm bietet sich der schönste Ausblick auf Stadt und Urstromtal."
-            },
-            { 
-                id: 8, 
-                name: "Aussichtspunkt Belziger Landschaftswiesen", 
-                x: 200, z: -70, 
-                visited: false,
-                description: "Am Burgenwanderweg gelegen, bietet sich ein eindrucksvoller Blick in das Niederungsgebiet - eines der wichtigsten Vogelschutzgebiete Brandenburgs mit Großtrappen."
-            },
-            { 
-                id: 9, 
-                name: "Wiesenburg mit Schloss und Park", 
-                x: -85, z: 20, 
-                visited: false,
-                description: "Das Schloss erhebt sich majestätisch über dem Ort. Der als Landschaftspark gestaltete Schlosspark ist der bedeutendste seiner Art im Hohen Fläming und lädt zum ausgiebigen Spazieren ein."
-            },
-            { 
-                id: 10, 
-                name: "Naturparkzentrum Hoher Fläming", 
-                x: 40, z: 150, 
-                visited: false,
-                description: "Das Besucherinformationszentrum ist zentrale Anlaufstelle für alle Gäste. Hier erhält man die besten Tipps für Ausflüge, kann Fahrräder ausleihen und die Naturparkausstellung besuchen."
-            },
-            { 
-                id: 11, 
-                name: "Raben mit Burg Rabenstein", 
-                x: 30, z: 140, 
-                visited: false,
-                description: "Auf einem Hügel gelegen thront die südlichste der Flämingburgen, die Burg Rabenstein. Von hier führt ein Naturlehrpfad durch das Naturschutzgebiet Rabenstein hinunter ins Dorf."
-            },
-            { 
-                id: 12, 
-                name: "Niemegk", 
-                x: 210, z: 70, 
-                visited: false,
-                description: "Das Städtchen Niemegk mit seinem alten Rathaus prägt das Stadtbild. Vom Kirchturm bietet sich ein schöner Ausblick auf die Hauptkette des Flämings."
-            },
-            { 
-                id: 13, 
-                name: "Flämingbuchen", 
-                x: -140, z: 90, 
-                visited: false,
-                description: "In dem großen Waldgebiet der Brandenheide sind einige Inseln aus Buchen zu finden, wie in den Naturschutzgebieten 'Flämingbuchen' und 'Spring'."
-            },
-            { 
-                id: 14, 
-                name: "Brautrummel mit Riesenstein", 
-                x: 25, z: 35, 
-                visited: false,
-                description: "Die Sage erzählt, wie ein junges Brautpaar nach einem Gewitterregen in der Rummel ertrank. Heute kann man auf einer Rundwanderung zum Riesenstein die besondere Natur erleben."
-            },
-            { 
-                id: 15, 
-                name: "Neuendorfer Rummel", 
-                x: 150, z: 140, 
-                visited: false,
-                description: "Die Rummeln - verzweigte, enge Trockentäler - entstanden nach dem Abtauen der Gletscher. Wie grüne Finger stechen sie sich weit in die Agrarlandschaft hinein."
-            },
-            { 
-                id: 16, 
-                name: "Garrey mit Aussichtsplattform", 
-                x: 180, z: 160, 
-                visited: false,
-                description: "Die Landschaft rings um Garrey bietet fantastische Ausblicke. Eine Aussichtsplattform krönt das restaurierte alte Wasserwerk, in dem sich eine kleine Ausstellung befindet."
-            }
-        ];
+            // ============= POI DATA =============
+            const POI_DATA = [
+                { id: 1, name: "Stadt und Burg Ziesar", x: -180, z: -190, visited: false, description: "Auf der Burg Ziesar befindet sich das Museum für brandenburgische Kirchen- und Kulturgeschichte des Mittelalters. Der sehr gut erhaltene Burgfried und die Schlosskapelle bieten einen weiten Blick über den Ziesarer Kiez." },
+                { id: 2, name: "Gutspark Dahlen", x: -80, z: -150, visited: false, description: "Der Gutspark Dahlen ist ein Waldstück seltener botanischer Kunst. Spaziergänge um den Schwanensee verzaubern die Besucher. Der Bauerngarten mit Kultur- und Duftpflanzen kann besucht werden." },
+                { id: 3, name: "Klein Briesener Bach", x: 20, z: -170, visited: false, description: "Der Artesische Brunnen im Naturschutzgebiet Klein Briesener Bach - hier steigt das Wasser nur durch den Erd-Eigendruck hervor und wird durch eine Rinne dem Briesenfließ zugeführt." },
+                { id: 4, name: "Paradies Dippmannsdorf", x: 140, z: -160, visited: false, description: "Aus einigen Dutzend Quellen sprudelt glasklares Wasser, das die Mühlenbäche speist. Der aus Buchen, Eichen und Birken bestehende Quellkopf wurde begehbar erschlossen." },
+                { id: 5, name: "Töpferort Görzke", x: -185, z: -80, visited: false, description: "Ein Besuch der kleinen Museen und des Handwerkerhofs, ein Bummel entlang der Bauernhöfe und Einkaufsmöglichkeiten in fünf Töpfereien erwarten die Besucher des Flämingdorfes." },
+                { id: 6, name: "Hagelberg", x: 15, z: -20, visited: false, description: "Der Hagelberg, ein echter 'Zweitausender' (200,3m), lädt zum Eintrag ins Gipfelbuch ein. Für den 'Aufstieg' zum Gipfelkreuz wird man mit einem schönen Blick über die Fläminglandschaft belohnt." },
+                { id: 7, name: "Bad Belzig mit Burg Eisenhardt", x: 145, z: -50, visited: false, description: "Auf der komplett erhaltenen Burg kann die 1000-jährige Geschichte der Stadt hautnah erkundet werden. Vom Butterturm bietet sich der schönste Ausblick auf Stadt und Urstromtal." },
+                { id: 8, name: "Aussichtspunkt Belziger Landschaftswiesen", x: 200, z: -70, visited: false, description: "Am Burgenwanderweg gelegen, bietet sich ein eindrucksvoller Blick in das Niederungsgebiet - eines der wichtigsten Vogelschutzgebiete Brandenburgs mit Großtrappen." },
+                { id: 9, name: "Wiesenburg mit Schloss und Park", x: -85, z: 20, visited: false, description: "Das Schloss erhebt sich majestätisch über dem Ort. Der als Landschaftspark gestaltete Schlosspark ist der bedeutendste seiner Art im Hohen Fläming und lädt zum ausgiebigen Spazieren ein." },
+                { id: 10, name: "Naturparkzentrum Hoher Fläming", x: 40, z: 150, visited: false, description: "Das Besucherinformationszentrum ist zentrale Anlaufstelle für alle Gäste. Hier erhält man die besten Tipps für Ausflüge, kann Fahrräder ausleihen und die Naturparkausstellung besuchen." },
+                { id: 11, name: "Raben mit Burg Rabenstein", x: 30, z: 140, visited: false, description: "Auf einem Hügel gelegen thront die südlichste der Flämingburgen, die Burg Rabenstein. Von hier führt ein Naturlehrpfad durch das Naturschutzgebiet Rabenstein hinunter ins Dorf." },
+                { id: 12, name: "Niemegk", x: 210, z: 70, visited: false, description: "Das Städtchen Niemegk mit seinem alten Rathaus prägt das Stadtbild. Vom Kirchturm bietet sich ein schöner Ausblick auf die Hauptkette des Flämings." },
+                { id: 13, name: "Flämingbuchen", x: -140, z: 90, visited: false, description: "In dem großen Waldgebiet der Brandenheide sind einige Inseln aus Buchen zu finden, wie in den Naturschutzgebieten 'Flämingbuchen' und 'Spring'." },
+                { id: 14, name: "Brautrummel mit Riesenstein", x: 25, z: 35, visited: false, description: "Die Sage erzählt, wie ein junges Brautpaar nach einem Gewitterregen in der Rummel ertrank. Heute kann man auf einer Rundwanderung zum Riesenstein die besondere Natur erleben." },
+                { id: 15, name: "Neuendorfer Rummel", x: 150, z: 140, visited: false, description: "Die Rummeln - verzweigte, enge Trockentäler - entstanden nach dem Abtauen der Gletscher. Wie grüne Finger stechen sie sich weit in die Agrarlandschaft hinein." },
+                { id: 16, name: "Garrey mit Aussichtsplattform", x: 180, z: 160, visited: false, description: "Die Landschaft rings um Garrey bietet fantastische Ausblicke. Eine Aussichtsplattform krönt das restaurierte alte Wasserwerk, in dem sich eine kleine Ausstellung befindet." }
+            ];
 
-        // ============= GAME STATE =============
-        const gameState = {
-            keys: {},
-            mouseDown: false,
-            mouseX: 0,
-            mouseY: 0,
-            velocity: new THREE.Vector3(),
-            angularVelocity: 0,
-            altitude: 10,
-            speed: 0,
-            heading: 0,
-            visitedCount: 0,
-            nearPOI: null
-        };
+            // ============= GAME STATE =============
+            const gameState = {
+                keys: {},
+                mouseDown: false,
+                mouseX: 0,
+                mouseY: 0,
+                velocity: new THREE.Vector3(),
+                angularVelocity: 0,
+                altitude: 10,
+                speed: 0,
+                heading: 0,
+                visitedCount: 0,
+                nearPOI: null
+            };
 
-        // ============= SCENE SETUP =============
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0xc8e8ff, 200, 1000);
-        
-        const camera = new THREE.PerspectiveCamera(
-            75, 
-            window.innerWidth / window.innerHeight, 
-            0.1, 
-            2000
-        );
-        
-        const renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            powerPreference: "high-performance"
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(renderer.domElement);
-
-        // ============= LIGHTING =============
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(100, 100, 50);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.camera.left = -100;
-        directionalLight.shadow.camera.right = 100;
-        directionalLight.shadow.camera.top = 100;
-        directionalLight.shadow.camera.bottom = -100;
-        scene.add(directionalLight);
-
-        // ============= SKY =============
-        // Create gradient sky using a simple sphere with gradient texture
-        const skyGeometry = new THREE.SphereGeometry(800, 32, 32);
-        
-        // Create gradient texture
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const context = canvas.getContext('2d');
-        
-        // Create gradient
-        const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#0077ff');  // Deep blue at top
-        gradient.addColorStop(0.4, '#4499ff'); // Medium blue
-        gradient.addColorStop(0.7, '#88bbff'); // Light blue
-        gradient.addColorStop(1, '#ffffff');   // White at horizon
-        
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const skyTexture = new THREE.CanvasTexture(canvas);
-        const skyMaterial = new THREE.MeshBasicMaterial({
-            map: skyTexture,
-            side: THREE.BackSide
-        });
-        const sky = new THREE.Mesh(skyGeometry, skyMaterial);
-        scene.add(sky);
-        
-        // ============= CLOUDS =============
-        const clouds = [];
-        function createClouds() {
-            const cloudGeometry = new THREE.SphereGeometry(1, 6, 6);
-            const cloudMaterial = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.8
-            });
+            // ============= SCENE SETUP =============
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             
-            // Create 20 cloud formations
-            for (let i = 0; i < 20; i++) {
-                const cloudGroup = new THREE.Group();
-                
-                // Each cloud is made of multiple spheres
-                const sphereCount = 3 + Math.floor(Math.random() * 5);
-                for (let j = 0; j < sphereCount; j++) {
-                    const cloudPart = new THREE.Mesh(cloudGeometry, cloudMaterial);
-                    cloudPart.position.set(
-                        Math.random() * 20 - 10,
-                        Math.random() * 5,
-                        Math.random() * 20 - 10
-                    );
-                    const scale = 5 + Math.random() * 10;
-                    cloudPart.scale.set(scale, scale * 0.6, scale);
-                    cloudGroup.add(cloudPart);
-                }
-                
-                // Position clouds in the sky
-                cloudGroup.position.set(
-                    (Math.random() - 0.5) * 600,
-                    80 + Math.random() * 60,
-                    (Math.random() - 0.5) * 600
-                );
-                
-                cloudGroup.userData = {
-                    speed: 0.5 + Math.random() * 1,
-                    originalX: cloudGroup.position.x
-                };
-                
-                clouds.push(cloudGroup);
-                scene.add(cloudGroup);
-            }
-        }
-        createClouds();
-        
-        // ============= SUN =============
-        const sunLight = new THREE.DirectionalLight(0xffffa0, 0.5);
-        sunLight.position.set(200, 200, 100);
-        scene.add(sunLight);
-        
-        // Add sun sphere for visual reference
-        const sunGeometry = new THREE.SphereGeometry(20, 16, 16);
-        const sunMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffff99
-        });
-        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-        sun.position.set(200, 200, 100);
-        scene.add(sun);
-
-        // ============= TERRAIN =============
-        // Create terrain geometry first
-        const terrainGeometry = new THREE.PlaneGeometry(CONFIG.MAP_SIZE, CONFIG.MAP_SIZE, 50, 50);
-        
-        // Add some hills to the geometry
-        const vertices = terrainGeometry.attributes.position.array;
-        for (let i = 0; i < vertices.length; i += 3) {
-            const x = vertices[i];
-            const y = vertices[i + 1];
-            vertices[i + 2] = Math.sin(x * 0.02) * Math.cos(y * 0.02) * 5 + Math.random() * 1;
-        }
-        terrainGeometry.computeVertexNormals();
-        
-        // Create terrain with green material as default
-        const terrainMaterial = new THREE.MeshLambertMaterial({
-            color: 0x3a8b3a,
-            side: THREE.DoubleSide
-        });
-        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-        terrain.rotation.x = -Math.PI / 2;
-        terrain.receiveShadow = true;
-        scene.add(terrain);
-        
-        // Try to load map texture after terrain is created
-        const textureLoader = new THREE.TextureLoader();
-        const mapUrl = 'https://raw.githubusercontent.com/Mikieb1982/Hoher-Flaeming-Helicopter-Ride/main/images/map.jpg';
-        
-        // Attempt to load texture but don't block game start
-        textureLoader.load(
-            mapUrl,
-            // Success callback
-            (texture) => {
-                console.log('Map texture loaded successfully');
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                terrain.material = new THREE.MeshLambertMaterial({
-                    map: texture,
-                    side: THREE.DoubleSide
-                });
-            },
-            // Progress callback
-            (xhr) => {
-                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-            },
-            // Error callback
-            (error) => {
-                console.log('Map texture could not be loaded, using green terrain');
-            }
-        );
-
-        // ============= HELICOPTER =============
-        const helicopter = new THREE.Group();
-        let mainRotorGroup;  // Declare these at a higher scope
-        let tailRotorGroup;
-        
-        // Body
-        const bodyGeometry = new THREE.BoxGeometry(2, 1.5, 4);
-        const bodyMaterial = new THREE.MeshPhongMaterial({
-            color: 0xc94a4a
-        });
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        body.position.y = 0.75;
-        body.castShadow = true;
-        helicopter.add(body);
-        
-        // Cockpit
-        const cockpitGeometry = new THREE.SphereGeometry(1, 8, 6);
-        const cockpitMaterial = new THREE.MeshPhongMaterial({
-            color: 0x333333,
-            opacity: 0.8,
-            transparent: true
-        });
-        const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-        cockpit.position.set(0, 1, 1.5);
-        cockpit.scale.set(0.8, 0.6, 1);
-        helicopter.add(cockpit);
-        
-        // Tail
-        const tailGeometry = new THREE.CylinderGeometry(0.15, 0.4, 3);
-        const tailMaterial = new THREE.MeshPhongMaterial({
-            color: 0xc94a4a
-        });
-        const tail = new THREE.Mesh(tailGeometry, tailMaterial);
-        tail.position.set(0, 0.6, -3);
-        tail.rotation.x = Math.PI / 2;
-        tail.castShadow = true;
-        helicopter.add(tail);
-        
-        // Main Rotor
-        mainRotorGroup = new THREE.Group();
-        const rotorGeometry = new THREE.BoxGeometry(10, 0.1, 0.4);
-        const rotorMaterial = new THREE.MeshPhongMaterial({
-            color: 0x444444
-        });
-        const mainRotor = new THREE.Mesh(rotorGeometry, rotorMaterial);
-        mainRotorGroup.add(mainRotor);
-        
-        const mainRotor2 = mainRotor.clone();
-        mainRotor2.rotation.y = Math.PI / 2;
-        mainRotorGroup.add(mainRotor2);
-        
-        mainRotorGroup.position.y = 2;
-        helicopter.add(mainRotorGroup);
-        
-        // Tail Rotor
-        tailRotorGroup = new THREE.Group();
-        const tailRotorGeometry = new THREE.BoxGeometry(0.1, 1.5, 0.1);
-        const tailRotor = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
-        tailRotorGroup.add(tailRotor);
-        tailRotorGroup.position.set(0.3, 0.6, -4.5);
-        helicopter.add(tailRotorGroup);
-        
-        // Start position - Bad Belzig (POI #7)
-        helicopter.position.set(145, 10, -50);
-        scene.add(helicopter);
-
-        // ============= CLOUDS =============
-        const clouds = [];
-        
-        // ============= POI MARKERS =============
-        const poiMeshes = [];
-        
-        POI_DATA.forEach((poi, index) => {
-            const group = new THREE.Group();
-            
-            // Platform
-            const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.5, 16);
-            const platformMaterial = new THREE.MeshPhongMaterial({
-                color: 0xFF6600
-            });
-            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-            platform.receiveShadow = true;
-            group.add(platform);
-            
-            // Pole
-            const poleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 10);
-            const poleMaterial = new THREE.MeshPhongMaterial({
-                color: 0x666666
-            });
-            const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-            pole.position.y = 5;
-            group.add(pole);
-            
-            // Flag
-            const flagGeometry = new THREE.PlaneGeometry(3, 2);
-            const flagMaterial = new THREE.MeshPhongMaterial({
-                color: 0xFFFF00,
-                side: THREE.DoubleSide
-            });
-            const flag = new THREE.Mesh(flagGeometry, flagMaterial);
-            flag.position.set(1.5, 9, 0);
-            group.add(flag);
-            
-            // Number sprite
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 48px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(poi.id.toString(), 32, 32);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.position.y = 12;
-            sprite.scale.set(3, 3, 1);
-            group.add(sprite);
-            
-            group.position.set(poi.x, 0.25, poi.z);
-            group.userData = { poi: poi, flag: flag, platform: platform };
-            scene.add(group);
-            poiMeshes.push(group);
-        });
-
-        // ============= TREES =============
-        function createTrees() {
-            const treeCount = 100;
-            const treeGeometry = new THREE.ConeGeometry(3, 10, 8);
-            const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x0f5f0f });
-            const trunkGeometry = new THREE.CylinderGeometry(0.8, 0.8, 3);
-            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
-            
-            for (let i = 0; i < treeCount; i++) {
-                const tree = new THREE.Group();
-                
-                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                trunk.position.y = 1.5;
-                tree.add(trunk);
-                
-                const foliage = new THREE.Mesh(treeGeometry, treeMaterial);
-                foliage.position.y = 8;
-                foliage.castShadow = true;
-                tree.add(foliage);
-                
-                // Random position avoiding POIs
-                let x, z, validPosition;
-                do {
-                    x = (Math.random() - 0.5) * CONFIG.MAP_SIZE * 0.9;
-                    z = (Math.random() - 0.5) * CONFIG.MAP_SIZE * 0.9;
-                    validPosition = true;
-                    
-                    for (let poi of POI_DATA) {
-                        const dist = Math.sqrt((x - poi.x) ** 2 + (z - poi.z) ** 2);
-                        if (dist < 20) {
-                            validPosition = false;
-                            break;
-                        }
-                    }
-                } while (!validPosition);
-                
-                tree.position.set(x, 0, z);
-                scene.add(tree);
-            }
-        }
-        createTrees();
-
-        // ============= EVENT LISTENERS =============
-        document.addEventListener('keydown', (e) => {
-            // Map both arrow keys and WASD for compatibility
-            const key = e.key.toLowerCase();
-            
-            if (e.key === 'ArrowUp' || key === 'w') gameState.keys['forward'] = true;
-            if (e.key === 'ArrowDown' || key === 's') gameState.keys['backward'] = true;
-            if (e.key === 'ArrowLeft' || key === 'a') gameState.keys['left'] = true;
-            if (e.key === 'ArrowRight' || key === 'd') gameState.keys['right'] = true;
-            if (e.key === ' ') {
-                gameState.keys['up'] = true;
-                e.preventDefault(); // Prevent page scroll
-            }
-            if (e.key === 'Shift') gameState.keys['down'] = true;
-            if (key === 'l') gameState.keys['land'] = true;
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            
-            if (e.key === 'ArrowUp' || key === 'w') gameState.keys['forward'] = false;
-            if (e.key === 'ArrowDown' || key === 's') gameState.keys['backward'] = false;
-            if (e.key === 'ArrowLeft' || key === 'a') gameState.keys['left'] = false;
-            if (e.key === 'ArrowRight' || key === 'd') gameState.keys['right'] = false;
-            if (e.key === ' ') gameState.keys['up'] = false;
-            if (e.key === 'Shift') gameState.keys['down'] = false;
-            if (key === 'l') gameState.keys['land'] = false;
-        });
-        
-        renderer.domElement.addEventListener('mousedown', (e) => {
-            gameState.mouseDown = true;
-            gameState.mouseX = e.clientX;
-            gameState.mouseY = e.clientY;
-        });
-        
-        renderer.domElement.addEventListener('mouseup', () => {
-            gameState.mouseDown = false;
-        });
-        
-        renderer.domElement.addEventListener('mousemove', (e) => {
-            if (gameState.mouseDown) {
-                const deltaX = e.clientX - gameState.mouseX;
-                const deltaY = e.clientY - gameState.mouseY;
-                
-                // Rotate camera around helicopter
-                const angle = helicopter.rotation.y + deltaX * 0.01;
-                const distance = CONFIG.CAMERA_DISTANCE;
-                const height = CONFIG.CAMERA_HEIGHT - deltaY * 0.1;
-                
-                camera.position.x = helicopter.position.x + Math.sin(angle) * distance;
-                camera.position.z = helicopter.position.z + Math.cos(angle) * distance;
-                camera.position.y = helicopter.position.y + height;
-                
-                gameState.mouseX = e.clientX;
-                gameState.mouseY = e.clientY;
-            }
-        });
-        
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
 
-        // ============= UPDATE FUNCTIONS =============
-        function updateHelicopter(delta) {
-            // Handle input
-            let thrust = 0;
-            let turn = 0;
-            let climb = 0;
-            
-            if (gameState.keys['forward']) thrust = CONFIG.MOVEMENT_SPEED;
-            if (gameState.keys['backward']) thrust = -CONFIG.MOVEMENT_SPEED * 0.5;
-            if (gameState.keys['left']) turn = CONFIG.TURN_SPEED;
-            if (gameState.keys['right']) turn = -CONFIG.TURN_SPEED;
-            if (gameState.keys['up']) climb = CONFIG.CLIMB_SPEED;
-            if (gameState.keys['down']) climb = -CONFIG.CLIMB_SPEED;
-            
-            // Apply rotation
-            helicopter.rotation.y += turn * delta;
-            gameState.heading = helicopter.rotation.y;
-            
-            // Apply thrust (in local space)
-            const forward = new THREE.Vector3(0, 0, -1);
-            forward.applyQuaternion(helicopter.quaternion);
-            gameState.velocity.add(forward.multiplyScalar(thrust * delta));
-            
-            // Apply climb
-            gameState.velocity.y += climb * delta;
-            
-            // Apply drag
-            gameState.velocity.multiplyScalar(0.95);
-            
-            // Update position
-            helicopter.position.add(gameState.velocity.clone().multiplyScalar(delta));
-            
-            // Ground collision
-            if (helicopter.position.y < 1) {
-                helicopter.position.y = 1;
-                gameState.velocity.y = 0;
-            }
-            
-            // Height limit
-            if (helicopter.position.y > 200) {
-                helicopter.position.y = 200;
-                gameState.velocity.y = 0;
-            }
-            
-            // Map boundaries
-            const boundary = CONFIG.MAP_SIZE / 2 - 10;
-            helicopter.position.x = Math.max(-boundary, Math.min(boundary, helicopter.position.x));
-            helicopter.position.z = Math.max(-boundary, Math.min(boundary, helicopter.position.z));
-            
-            // Update stats
-            gameState.altitude = Math.round(helicopter.position.y);
-            gameState.speed = Math.round(
-                Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10
+            // ============= LIGHTING =============
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(100, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -CONFIG.MAP_SIZE / 2;
+            directionalLight.shadow.camera.right = CONFIG.MAP_SIZE / 2;
+            directionalLight.shadow.camera.top = CONFIG.MAP_SIZE / 2;
+            directionalLight.shadow.camera.bottom = -CONFIG.MAP_SIZE / 2;
+            scene.add(directionalLight);
+
+            // ============= SKY & SUN =============
+            const sky = new THREE.Mesh(
+                new THREE.SphereGeometry(1000, 32, 32),
+                new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide })
             );
+            scene.add(sky);
             
-            // Tilt based on movement
-            helicopter.rotation.z = -turn * 0.3;
-            helicopter.rotation.x = thrust * 0.01;
-            
-            // Animate rotors
-            mainRotorGroup.rotation.y += delta * 20;
-            tailRotorGroup.rotation.z += delta * 30;
-        }
-        
-        function animateClouds(delta) {
-            // Animate cloud movement
-            clouds.forEach(cloud => {
-                cloud.position.x += cloud.userData.speed * delta * 5;
-                
-                // Reset cloud position when it goes too far
-                if (cloud.position.x > 350) {
-                    cloud.position.x = -350;
-                }
-                
-                // Gentle vertical bobbing
-                cloud.position.y += Math.sin(Date.now() * 0.0001 * cloud.userData.speed) * 0.02;
-            });
-        }
-            
-            // Apply rotation
-            helicopter.rotation.y += turn * delta;
-            gameState.heading = helicopter.rotation.y;
-            
-            // Apply thrust (in local space)
-            const forward = new THREE.Vector3(0, 0, -1);
-            forward.applyQuaternion(helicopter.quaternion);
-            gameState.velocity.add(forward.multiplyScalar(thrust * delta));
-            
-            // Apply climb
-            gameState.velocity.y += climb * delta;
-            
-            // Apply drag
-            gameState.velocity.multiplyScalar(0.95);
-            
-            // Update position
-            helicopter.position.add(gameState.velocity.clone().multiplyScalar(delta));
-            
-            // Ground collision
-            if (helicopter.position.y < 1) {
-                helicopter.position.y = 1;
-                gameState.velocity.y = 0;
-            }
-            
-            // Height limit
-            if (helicopter.position.y > 200) {
-                helicopter.position.y = 200;
-                gameState.velocity.y = 0;
-            }
-            
-            // Map boundaries
-            const boundary = CONFIG.MAP_SIZE / 2 - 10;
-            helicopter.position.x = Math.max(-boundary, Math.min(boundary, helicopter.position.x));
-            helicopter.position.z = Math.max(-boundary, Math.min(boundary, helicopter.position.z));
-            
-            // Update stats
-            gameState.altitude = Math.round(helicopter.position.y);
-            gameState.speed = Math.round(
-                Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10
+            const sun = new THREE.Mesh(
+                new THREE.SphereGeometry(20, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0xffff99 })
             );
-            
-            // Tilt based on movement
-            helicopter.rotation.z = -turn * 0.3;
-            helicopter.rotation.x = thrust * 0.01;
-            
-            // Animate rotors
-            mainRotorGroup.rotation.y += delta * 20;
-            tailRotorGroup.rotation.z += delta * 30;
-        }
-        
-        function updateCamera() {
-            if (!gameState.mouseDown) {
-                // Follow helicopter
-                const offset = new THREE.Vector3(0, CONFIG.CAMERA_HEIGHT, CONFIG.CAMERA_DISTANCE);
-                offset.applyQuaternion(helicopter.quaternion);
-                const targetPosition = helicopter.position.clone().add(offset);
-                
-                camera.position.lerp(targetPosition, 0.1);
-                camera.lookAt(helicopter.position);
+            sun.position.copy(directionalLight.position);
+            scene.add(sun);
+
+            // ============= TERRAIN =============
+            const terrainGeometry = new THREE.PlaneGeometry(CONFIG.MAP_SIZE, CONFIG.MAP_SIZE, 100, 100);
+            const vertices = terrainGeometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const y = vertices[i + 1];
+                // Simple noise for hills
+                vertices[i + 2] = (Math.sin(x * 0.02) + Math.cos(y * 0.03)) * 5 + Math.random() * 2;
             }
-        }
-        
-        function checkPOIs() {
-            gameState.nearPOI = null;
+            terrainGeometry.computeVertexNormals();
             
-            poiMeshes.forEach(mesh => {
-                const poi = mesh.userData.poi;
-                const distance = helicopter.position.distanceTo(mesh.position);
-                
-                if (distance < CONFIG.LANDING_DISTANCE && 
-                    helicopter.position.y < CONFIG.LANDING_HEIGHT &&
-                    !poi.visited) {
-                    
-                    gameState.nearPOI = poi;
-                    
-                    // Land at POI
-                    if (gameState.keys['land']) {
-                        poi.visited = true;
-                        gameState.visitedCount++;
-                        
-                        // Change colors
-                        mesh.userData.platform.material.color.setHex(0x00FF00);
-                        mesh.userData.flag.material.color.setHex(0x00FF00);
-                        
-                        // Update POI list
-                        updatePOIList();
-                        
-                        // Show info panel
-                        showInfoPanel(poi);
-                        
-                        // Check for completion
-                        if (gameState.visitedCount === POI_DATA.length) {
-                            setTimeout(() => {
-                                showMessage("🎉 Mission Complete! All POIs visited!");
-                            }, 2000);
-                        }
-                    }
-                }
-                
-                // Highlight nearby POI
-                if (distance < CONFIG.LANDING_DISTANCE * 2 && !poi.visited) {
-                    mesh.userData.flag.material.emissive = new THREE.Color(0xFFFF00);
-                    mesh.userData.flag.material.emissiveIntensity = 0.5 * (1 + Math.sin(Date.now() * 0.005));
-                } else {
-                    mesh.userData.flag.material.emissive = new THREE.Color(0x000000);
-                    mesh.userData.flag.material.emissiveIntensity = 0;
-                }
-            });
-        }
-        
-        function updateHUD() {
-            document.getElementById('altitude').textContent = gameState.altitude;
-            document.getElementById('speed').textContent = gameState.speed;
-            document.getElementById('visited').textContent = gameState.visitedCount;
+            const terrainMaterial = new THREE.MeshLambertMaterial({ color: 0x3a8b3a });
+            const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+            terrain.rotation.x = -Math.PI / 2; // This line was incomplete
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+
+            // ============= HELICOPTER =============
+            const helicopter = new THREE.Group();
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x4287f5 }); // Blue body
+            const glassMat = new THREE.MeshPhongMaterial({ color: 0xadd8e6, transparent: true, opacity: 0.5 });
             
-            // Compass heading
-            const degrees = ((gameState.heading * 180 / Math.PI) % 360 + 360) % 360;
-            let heading = 'N';
-            if (degrees > 337.5 || degrees <= 22.5) heading = 'N';
-            else if (degrees > 22.5 && degrees <= 67.5) heading = 'NE';
-            else if (degrees > 67.5 && degrees <= 112.5) heading = 'E';
-            else if (degrees > 112.5 && degrees <= 157.5) heading = 'SE';
-            else if (degrees > 157.5 && degrees <= 202.5) heading = 'S';
-            else if (degrees > 202.5 && degrees <= 247.5) heading = 'SW';
-            else if (degrees > 247.5 && degrees <= 292.5) heading = 'W';
-            else if (degrees > 292.5 && degrees <= 337.5) heading = 'NW';
+            const body = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 5), bodyMat);
+            helicopter.add(body);
+
+            const cockpit = new THREE.Mesh(new THREE.SphereGeometry(3, 8, 8), glassMat);
+            cockpit.position.x = 5;
+            helicopter.add(cockpit);
+
+            const tailBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 8, 8), bodyMat);
+            tailBoom.rotation.z = Math.PI / 2;
+            tailBoom.position.x = -9;
+            helicopter.add(tailBoom);
             
-            document.getElementById('heading').textContent = `${heading} (${Math.round(degrees)}°)`;
-            
-            // Show landing prompt
-            if (gameState.nearPOI) {
-                showMessage(`Press L to visit: ${gameState.nearPOI.name}`, 100);
-            }
-        }
-        
-        function updatePOIList() {
-            const container = document.getElementById('poi-items');
-            container.innerHTML = '';
+            const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2, 0.2), bodyMat);
+            tailRotor.position.set(-13, 1, 0);
+            helicopter.add(tailRotor);
+
+            const mainRotor = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 0.2), bodyMat);
+            mainRotor.position.y = 3;
+            helicopter.add(mainRotor);
+
+            helicopter.position.y = gameState.altitude;
+            helicopter.castShadow = true;
+            scene.add(helicopter);
+
+            // ============= POI MARKERS =============
+            const poiMarkers = new THREE.Group();
+            const poiMaterial = new THREE.MeshBasicMaterial({ color: 0xffa500 }); // Orange marker
+            const poiGeometry = new THREE.ConeGeometry(2, 8, 8);
             
             POI_DATA.forEach(poi => {
-                const div = document.createElement('div');
-                div.className = 'poi-item' + (poi.visited ? ' visited' : '');
-                div.textContent = `${poi.id}. ${poi.name}`;
-                div.onclick = () => {
-                    // Look at POI
-                    const poiMesh = poiMeshes.find(m => m.userData.poi.id === poi.id);
-                    if (poiMesh) {
-                        camera.lookAt(poiMesh.position);
-                    }
-                };
-                container.appendChild(div);
+                const marker = new THREE.Mesh(poiGeometry, poiMaterial);
+                marker.position.set(poi.x, 10, poi.z); // Elevated marker
+                marker.rotation.x = Math.PI; // Point down
+                poi.object = marker; // Link object back to data
+                poiMarkers.add(marker);
             });
-        }
-        
-        let messageTimeout;
-        function showMessage(text, duration = 2000) {
-            const messageEl = document.getElementById('message');
-            messageEl.textContent = text;
-            messageEl.style.display = 'block';
-            
-            clearTimeout(messageTimeout);
-            if (duration > 0) {
-                messageTimeout = setTimeout(() => {
-                    messageEl.style.display = 'none';
-                }, duration);
-            }
-        }
-        
-        function showInfoPanel(poi) {
-            gamePaused = true;
-            document.getElementById('info-title').textContent = `${poi.id}. ${poi.name}`;
-            document.getElementById('info-description').textContent = poi.description;
-            document.getElementById('info-panel').style.display = 'block';
-        }
-        
-        function closeInfoPanel() {
-            gamePaused = false;
-            document.getElementById('info-panel').style.display = 'none';
-        }
+            scene.add(poiMarkers);
 
-        // ============= GAME LOOP =============
-        const clock = new THREE.Clock();
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            const delta = clock.getDelta();
-            
-            // Only update game when not paused
-            if (!gamePaused) {
-                updateHelicopter(delta);
-                animateClouds(delta);
-                updateCamera();
-                checkPOIs();
-                updateHUD();
-            } else {
-                // Still animate clouds even when paused
-                animateClouds(delta);
+            // ============= UI FUNCTIONS =============
+            function updatePoiList() {
+                const list = document.getElementById('poi-items');
+                list.innerHTML = '';
+                POI_DATA.forEach(poi => {
+                    const item = document.createElement('div');
+                    item.className = 'poi-item';
+                    if (poi.visited) item.classList.add('visited');
+                    item.textContent = poi.name;
+                    item.onclick = () => {
+                        // Fly towards POI (simple implementation)
+                        helicopter.position.x = poi.x;
+                        helicopter.position.z = poi.z;
+                    };
+                    list.appendChild(item);
+                });
             }
-            
-            renderer.render(scene, camera);
-        }
 
-        // ============= INITIALIZATION =============
-        // Start the game immediately when the page loads
-        window.addEventListener('load', () => {
-            try {
-                // Hide loader
-                document.getElementById('loader').style.display = 'none';
-                
-                // Show UI
-                document.getElementById('hud').style.display = 'block';
-                document.getElementById('controls').style.display = 'block';
-                document.getElementById('poi-list').style.display = 'block';
-                
-                // Initialize POI list
-                updatePOIList();
-                
-                // Show welcome message
-                showMessage('Welcome to Hoher Fläming! Explore all 16 POIs!', 5000);
-                
-                // Start game loop
-                animate();
-            } catch (error) {
-                console.error('Initialization error:', error);
-                document.getElementById('loader').innerHTML = '<div>Error: ' + error.message + '</div>';
+            function showMessage(text, duration = 2000) {
+                const msgEl = document.getElementById('message');
+                msgEl.textContent = text;
+                msgEl.style.display = 'block';
+                setTimeout(() => msgEl.style.display = 'none', duration);
             }
-        });
-        
-        } catch (error) {
-            console.error('Setup error:', error);
-            document.getElementById('loader').innerHTML = '<div>Error: ' + error.message + '</div>';
+
+            function openInfoPanel(poi) {
+                gamePaused = true;
+                document.getElementById('info-title').textContent = poi.name;
+                document.getElementById('info-description').textContent = poi.description;
+                document.getElementById('info-panel').style.display = 'block';
+            }
+
+            window.closeInfoPanel = function() {
+                gamePaused = false;
+                document.getElementById('info-panel').style.display = 'none';
+            }
+
+            // ============= INPUT HANDLING =============
+            document.addEventListener('keydown', (e) => gameState.keys[e.code] = true);
+            document.addEventListener('keyup', (e) => gameState.keys[e.code] = false);
+            
+            // ============= ANIMATION LOOP =============
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const delta = clock.getDelta();
+
+                if (gamePaused) return;
+
+                // --- Helicopter Logic ---
+                const forward = new THREE.Vector3();
+                helicopter.getWorldDirection(forward);
+
+                if (gameState.keys['ArrowUp']) gameState.velocity.add(forward.multiplyScalar(CONFIG.MOVEMENT_SPEED * delta));
+                if (gameState.keys['ArrowDown']) gameState.velocity.sub(forward.multiplyScalar(CONFIG.MOVEMENT_SPEED * delta));
+                if (gameState.keys['ArrowLeft']) helicopter.rotation.y += CONFIG.TURN_SPEED * delta;
+                if (gameState.keys['ArrowRight']) helicopter.rotation.y -= CONFIG.TURN_SPEED * delta;
+                if (gameState.keys['Space']) helicopter.position.y += CONFIG.CLIMB_SPEED * delta;
+                if (gameState.keys['Shift']) helicopter.position.y -= CONFIG.CLIMB_SPEED * delta;
+
+                // Apply friction
+                gameState.velocity.multiplyScalar(1 - 2 * delta);
+                helicopter.position.add(gameState.velocity.clone().multiplyScalar(delta));
+                
+                // Keep helicopter within bounds
+                helicopter.position.x = Math.max(-CONFIG.MAP_SIZE/2, Math.min(CONFIG.MAP_SIZE/2, helicopter.position.x));
+                helicopter.position.z = Math.max(-CONFIG.MAP_SIZE/2, Math.min(CONFIG.MAP_SIZE/2, helicopter.position.z));
+                helicopter.position.y = Math.max(2, helicopter.position.y); // Min altitude
+
+                // Rotor animation
+                mainRotor.rotation.y += 20 * delta;
+                tailRotor.rotation.x += 20 * delta;
+
+                // --- Camera Logic ---
+                const idealOffset = new THREE.Vector3(-CONFIG.CAMERA_DISTANCE, CONFIG.CAMERA_HEIGHT, 0);
+                idealOffset.applyQuaternion(helicopter.quaternion);
+                const idealLookat = helicopter.position.clone();
+                
+                const cameraPosition = helicopter.position.clone().add(idealOffset);
+                camera.position.lerp(cameraPosition, 0.1);
+                camera.lookAt(idealLookat);
+
+                // --- POI Logic ---
+                let closestPOI = null;
+                let minDist = CONFIG.LANDING_DISTANCE;
+                
+                POI_DATA.forEach(poi => {
+                    const dist = helicopter.position.distanceTo(poi.object.position);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestPOI = poi;
+                    }
+                    // Marker animation
+                    poi.object.rotation.y += 0.5 * delta;
+                });
+                gameState.nearPOI = closestPOI;
+
+                if (gameState.keys['KeyL'] && gameState.nearPOI && !gameState.nearPOI.visited) {
+                    if (helicopter.position.y < CONFIG.LANDING_HEIGHT) {
+                        gameState.nearPOI.visited = true;
+                        gameState.visitedCount++;
+                        updatePoiList();
+                        openInfoPanel(gameState.nearPOI);
+                    } else {
+                        showMessage("Too high to land! Descend below 5m.");
+                    }
+                }
+
+                // --- Update HUD ---
+                document.getElementById('altitude').textContent = helicopter.position.y.toFixed(0);
+                document.getElementById('speed').textContent = (gameState.velocity.length() * 3.6).toFixed(0); // Convert m/s to km/h
+                document.getElementById('visited').textContent = gameState.visitedCount;
+                const heading = (helicopter.rotation.y * 180 / Math.PI) % 360;
+                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                document.getElementById('heading').textContent = directions[Math.round(((heading < 0 ? 360 + heading : heading) / 45)) % 8];
+
+                renderer.render(scene, camera);
+            }
+
+            // --- Initialisation ---
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('poi-list').style.display = 'block';
+            updatePoiList();
+            animate();
+
+        } catch (e) {
+            console.error('An error occurred:', e);
+            const loader = document.getElementById('loader');
+            if(loader) loader.innerHTML = '<div>A critical error occurred. Please check the console (F12) and refresh.</div>';
         }
     </script>
 </body>
 </html>
+
