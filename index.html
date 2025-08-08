@@ -2,594 +2,790 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hoher Fläming Helicopter Explorer - 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoher Fläming Helicopter Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
-        :root {
-            --bg-main: #f4f1e8;
-            --bg-panel: rgba(255, 255, 255, 0.85);
-            --text-primary: #3d352e;
-            --text-secondary: #6b5f55;
-            --accent-primary: #c94a4a;
-            --accent-secondary: #8c7851;
-            --accent-success: #5a9a68;
-            --border-color: rgba(0, 0, 0, 0.1);
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        html, body {
-            height: 100%;
-            width: 100%;
+        
+        body {
+            font-family: 'Georgia', serif;
             overflow: hidden;
-            font-family: "Georgia", "Times New Roman", serif;
-            background: #000;
-            color: var(--text-primary);
+            background: #87CEEB;
         }
-        #game-container {
-            position: absolute;
-            inset: 0;
-        }
+        
         canvas {
             display: block;
         }
-        .hud-container, .controls-container, .modal, .menu-container, #minimap, #achievement-toast, #loading-screen {
-            position: fixed;
+        
+        #loader {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            background: rgba(0,0,0,0.7);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 200px;
             z-index: 100;
         }
-        #loading-screen {
-            inset: 0;
-            background: var(--bg-main);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            color: var(--text-primary);
-            transition: opacity 0.5s ease-out;
-        }
-        .loading-helicopter { font-size: 60px; animation: loading-hover 1.5s ease-in-out infinite; margin-bottom: 20px; }
-        @keyframes loading-hover {
-            0%, 100% { transform: translateY(0) rotate(-2deg); }
-            50% { transform: translateY(-10px) rotate(2deg); }
-        }
-        .loading-text { font-size: 18px; color: var(--text-secondary); margin-bottom: 20px; }
-        .loading-bar { width: 200px; height: 4px; background: var(--border-color); }
-        .loading-bar-fill { height: 100%; background: var(--accent-primary); width: 0%; animation: loading-progress 1.5s ease-out forwards; }
-        @keyframes loading-progress { to { width: 100%; } }
-
-        #hud-container { top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
-        .hud-panel { background: var(--bg-panel); backdrop-filter: blur(5px); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 15px; box-shadow: var(--shadow-md); pointer-events: auto; }
-        .hud-row { display: flex; align-items: baseline; gap: 8px; margin: 4px 0; }
-        .hud-label { color: var(--text-secondary); font-size: 14px; }
-        .hud-value { font-weight: bold; font-size: 18px; color: var(--text-primary); }
-        #compass { width: 50px; height: 50px; position: relative; margin-left: 15px; }
-        #compass-ring { position: absolute; inset: 0; border: 2px solid var(--text-secondary); border-radius: 50%; color: var(--text-secondary); font-weight: bold; font-size: 12px; display: flex; justify-content: center; padding-top: 2px; }
-        #compass-needle { position: absolute; inset: 0; transition: transform 0.1s linear; }
-        #compass-needle::before { content: '▲'; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); color: var(--accent-primary); font-size: 20px; }
         
-        #controls-container { bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
-        #joystick-container { width: 130px; height: 130px; position: relative; pointer-events: auto; }
-        #joystick-base { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.6); border: 2px solid rgba(0,0,0,0.15); border-radius: 50%; box-shadow: var(--shadow-md), inset 0 2px 4px rgba(0,0,0,0.1); }
-        #joystick-handle { position: absolute; width: 60px; height: 60px; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--accent-primary); border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; box-shadow: var(--shadow-sm); cursor: grab; touch-action: none; }
-        #joystick-handle:active { cursor: grabbing; }
-        .action-buttons { display: flex; gap: 15px; align-items: center; pointer-events: auto; }
-        .action-button { width: 70px; height: 70px; background: var(--accent-primary); border: 2px solid white; border-radius: 50%; font-size: 16px; font-weight: bold; color: white; display: none; justify-content: center; align-items: center; cursor: pointer; box-shadow: var(--shadow-md); transition: all 0.2s ease; }
-        .action-button.visible { display: flex; }
-        .action-button:hover { transform: scale(1.05); }
-        .action-button:active { transform: scale(0.95); }
-        .action-button.secondary { background: var(--accent-secondary); width: 55px; height: 55px; font-size: 24px; }
-
-        #menu-container { top: 0; right: -350px; width: 350px; height: 100%; background: var(--bg-panel); backdrop-filter: blur(10px); border-left: 1px solid var(--border-color); z-index: 400; transition: right 0.3s ease; display: flex; flex-direction: column; }
-        #menu-container.open { right: 0; }
-        #menu-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        #menu-title { font-size: 22px; font-weight: bold; }
-        #menu-close { background: none; border: none; font-size: 22px; color: var(--text-secondary); cursor: pointer; }
-        #menu-content { flex: 1; overflow-y: auto; padding: 20px; }
-        .menu-section { margin-bottom: 25px; }
-        .menu-section-title { font-size: 14px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px; }
-        #poi-list { display: flex; flex-direction: column; gap: 8px; }
-        .poi-item { border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.2s ease; }
-        .poi-item:hover { background: rgba(0,0,0,0.03); border-color: var(--accent-primary); }
-        .poi-item.visited { background: rgba(0,0,0,0.05); text-decoration: line-through; }
-        .poi-item-header { display: flex; align-items: center; gap: 10px; }
-        .poi-item-name { flex: 1; font-weight: bold; font-size: 15px; }
-        .poi-item-status { color: var(--accent-success); font-size: 16px; font-weight: bold; text-decoration: none; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat-card { background: rgba(0,0,0,0.03); border-radius: 6px; padding: 10px; text-align: center; }
-        .stat-value { font-size: 20px; font-weight: bold; }
-        .stat-label { font-size: 12px; color: var(--text-secondary); }
-
-        .modal { inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: all 0.3s ease; backdrop-filter: blur(5px); }
-        .modal.active { opacity: 1; visibility: visible; }
-        .modal-content { background: var(--bg-main); border: 1px solid var(--border-color); padding: 30px; border-radius: 12px; width: 90%; max-width: 550px; box-shadow: var(--shadow-lg); transform: scale(0.9); transition: all 0.3s ease; }
-        .modal.active .modal-content { transform: scale(1); }
-        .modal-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .modal-icon { width: 40px; height: 40px; background: var(--accent-primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: white; flex-shrink: 0; }
-        .modal.visited .modal-icon { background: var(--accent-success); }
-        .modal h2 { flex: 1; margin: 0; font-size: 24px; }
-        .modal-description { color: var(--text-secondary); line-height: 1.7; font-size: 15px; margin-bottom: 25px; max-height: 150px; overflow-y: auto; }
-        .modal-stats { display: flex; gap: 15px; margin-bottom: 25px; }
-        .modal-stat { flex: 1; text-align: center; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px; }
-        .modal-stat-value { font-size: 18px; font-weight: bold; }
-        .modal-stat-label { font-size: 12px; color: var(--text-secondary); }
-        .modal-buttons { display: flex; gap: 15px; justify-content: flex-end; }
-        .modal-button { background: var(--accent-primary); color: white; border: none; padding: 12px 25px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
-        .modal-button:hover { filter: brightness(1.1); }
-        .modal-button.secondary { background: var(--accent-secondary); }
-
-        #achievement-toast { top: -100px; left: 50%; transform: translateX(-50%); background: var(--accent-success); color: white; padding: 12px 25px; border-radius: 50px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 10px; transition: top 0.5s ease; }
-        #achievement-toast.show { top: 20px; }
-        .achievement-icon { font-size: 20px; }
-        .achievement-text { font-weight: bold; }
-
-        #minimap { bottom: 20px; right: 20px; width: 180px; height: 135px; background: rgba(255,255,255,0.7); border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-md); }
-        #minimap-canvas { width: 100%; height: 100%; }
-
-        @media (max-width: 768px) {
-            #hud-container { flex-direction: column; gap: 10px; }
-            #menu-container { width: 100%; right: -100%; }
-            #minimap { display: none; }
+        #hud h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #FFD700;
+        }
+        
+        .hud-item {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .hud-value {
+            font-weight: bold;
+            color: #00FF00;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+        }
+        
+        #controls h4 {
+            margin: 0 0 8px 0;
+            color: #FFD700;
+        }
+        
+        .control-item {
+            margin: 3px 0;
+        }
+        
+        .key {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 5px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        #poi-list {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        #poi-list h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #FFD700;
+        }
+        
+        .poi-item {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .poi-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .poi-item.visited {
+            color: #00FF00;
+            text-decoration: line-through;
+        }
+        
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.5);
+            padding: 20px 40px;
+            border-radius: 10px;
+            display: none;
+            z-index: 500;
         }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-
-    <div id="loading-screen">
-        <div class="loading-content">
-            <div class="loading-helicopter">🚁</div>
-            <div class="loading-text">Building 3D World...</div>
-            <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    <div id="loader">
+        <div>Loading Hoher Fläming...</div>
+        <div style="margin-top: 10px; font-size: 14px;">Preparing helicopter...</div>
+    </div>
+    
+    <div id="hud" style="display: none;">
+        <h3>Flight Status</h3>
+        <div class="hud-item">
+            <span>Altitude:</span>
+            <span class="hud-value" id="altitude">0</span> m
+        </div>
+        <div class="hud-item">
+            <span>Speed:</span>
+            <span class="hud-value" id="speed">0</span> km/h
+        </div>
+        <div class="hud-item">
+            <span>Heading:</span>
+            <span class="hud-value" id="heading">N</span>
+        </div>
+        <div class="hud-item">
+            <span>POIs Visited:</span>
+            <span class="hud-value"><span id="visited">0</span>/16</span>
         </div>
     </div>
-
-    <div id="hud-container">
-        <div class="hud-panel">
-            <div class="hud-row"><span class="hud-label">Speed</span><span class="hud-value" id="speed-display">0.0</span></div>
-            <div class="hud-row"><span class="hud-label">Altitude</span><span class="hud-value" id="altitude-display">0</span></div>
-            <div class="hud-row"><span class="hud-label">POIs</span><span class="hud-value" id="poi-count">0/16</span></div>
-            <div class="hud-row"><span class="hud-label">Time</span><span class="hud-value" id="time-display">00:00</span></div>
-        </div>
-        <div class="hud-panel">
-            <div class="hud-row"><span class="hud-label">Heading</span><span class="hud-value" id="heading-display">0°</span></div>
-            <div id="compass"><div id="compass-ring">N</div><div id="compass-needle"></div></div>
-        </div>
+    
+    <div id="controls" style="display: none;">
+        <h4>Controls</h4>
+        <div class="control-item"><span class="key">↑</span> Forward</div>
+        <div class="control-item"><span class="key">↓</span> Backward</div>
+        <div class="control-item"><span class="key">←</span> Turn Left</div>
+        <div class="control-item"><span class="key">→</span> Turn Right</div>
+        <div class="control-item"><span class="key">Space</span> Ascend</div>
+        <div class="control-item"><span class="key">Shift</span> Descend</div>
+        <div class="control-item"><span class="key">L</span> Land at POI</div>
+        <div class="control-item"><span class="key">Mouse</span> Look Around</div>
     </div>
-
-    <div id="controls-container">
-        <div id="joystick-container"><div id="joystick-base"></div><div id="joystick-handle"></div></div>
-        <div class="action-buttons">
-            <button class="action-button" id="land-button">Land</button>
-            <button class="action-button secondary visible" id="menu-button" title="Menu">☰</button>
-        </div>
+    
+    <div id="poi-list" style="display: none;">
+        <h3>Points of Interest</h3>
+        <div id="poi-items"></div>
     </div>
+    
+    <div id="message"></div>
 
-    <div id="minimap"><canvas id="minimap-canvas"></canvas></div>
-
-    <div id="menu-container">
-        <div id="menu-header"><h2 id="menu-title">Mission Log</h2><button id="menu-close">✕</button></div>
-        <div id="menu-content">
-            <div class="menu-section">
-                <div class="menu-section-title">Flight Statistics</div>
-                <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-value" id="stat-distance">0</div><div class="stat-label">Distance (km)</div></div>
-                    <div class="stat-card"><div class="stat-value" id="stat-max-speed">0</div><div class="stat-label">Max Speed</div></div>
-                    <div class="stat-card"><div class="stat-value" id="stat-landings">0</div><div class="stat-label">Landings</div></div>
-                    <div class="stat-card"><div class="stat-value" id="stat-completion">0%</div><div class="stat-label">Completion</div></div>
-                </div>
-            </div>
-            <div class="menu-section">
-                <div class="menu-section-title">Points of Interest</div>
-                <div id="poi-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="poi-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-icon" id="modal-icon">1</div><h2 id="poi-modal-title">POI</h2></div>
-            <p class="modal-description" id="poi-modal-description"></p>
-            <div class="modal-stats">
-                <div class="modal-stat"><div class="modal-stat-value" id="modal-visit-time">--:--</div><div class="modal-stat-label">Visit Time</div></div>
-                <div class="modal-stat"><div class="modal-stat-value" id="modal-poi-number">1/16</div><div class="modal-stat-label">Progress</div></div>
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-button" id="continue-button">Continue</button>
-                <button class="modal-button secondary" id="next-poi-button">Next POI →</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="completion-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-icon">🏆</div><h2>Mission Complete!</h2></div>
-            <p class="modal-description">Congratulations, pilot! You've explored all 16 points of interest.</p>
-            <div class="modal-stats">
-                <div class="modal-stat"><div class="modal-stat-value" id="final-time">00:00</div><div class="modal-stat-label">Total Time</div></div>
-                <div class="modal-stat"><div class="modal-stat-value" id="final-distance">0 km</div><div class="stat-label">Distance</div></div>
-                <div class="modal-stat"><div class="modal-stat-value" id="final-speed">0</div><div class="stat-label">Avg Speed</div></div>
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-button" id="restart-button">New Mission</button>
-                <button class="modal-button secondary" id="explore-button">Free Flight</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="achievement-toast"><span class="achievement-icon">🏆</span><span id="achievement-text">Achievement!</span></div>
-
-    <script type="module">
-        // --- CONFIGURATION ---
+    <script>
+        // ============= CONFIGURATION =============
         const CONFIG = {
-            MAP_WIDTH: 2048,
-            MAP_HEIGHT: 1448,
-            MAX_SPEED: 8,
-            ACCELERATION: 0.3,
-            DRAG: 0.97,
-            TURN_SPEED: 2.5,
-            CLIMB_SPEED: 0.3,
-            LANDING_RADIUS: 15,
-            LANDING_ALTITUDE: 5,
-            JOYSTICK_RADIUS: 55,
+            MOVEMENT_SPEED: 30,
+            TURN_SPEED: 1.5,
+            CLIMB_SPEED: 20,
+            CAMERA_DISTANCE: 30,
+            CAMERA_HEIGHT: 15,
+            LANDING_DISTANCE: 10,
+            LANDING_HEIGHT: 5,
+            MAP_SIZE: 500
         };
 
-        // --- POI DATA ---
+        // ============= POI DATA =============
         const POI_DATA = [
-            { id: 1, name: "1. Stadt und Burg Ziesar", x: 472, y: 130, description: "Auf der Burg Ziesar befindet sich das Museum für brandenburgische Kirchen- und Kulturgeschichte des Mittelalters und der Reformationszeit. Sehenswert sind hier auch die Schlosskapelle und der sehr gut erhaltene Burgfriede - auch Schlosskappelle und der der weiße Blick vom Storchenturm über den ziesarschen Kiez." },
-            { id: 2, name: "2. Gutspark Dahlen", x: 780, y: 355, description: "Der Gutspark Dahlen ist ein Waldstück seltener botanischer Wundt. Wobei die Spatziergänge um den Schwanensee die Besucher verzaubern. Zudem kann der Bauengarten Kultur- und Garttern und Duftrlanzen besucht werden. Gleich gegenüber dem Gutspark steht, etwas verborgen, die Friedhofswehrkirche." },
-            { id: 3, name: "3. Klein Briesener Bach", x: 995, y: 250, description: "Der Artesische Brunnen ist im Naturschutzgebiet Klein Briesener Bach zu finden. Das Wasser steigt hier nur durch den Erd-Eigendruck hervor und wird durch eine Rinne Briesenfließ zu geführt. Wunderrode können dem Schönheiten Bach auf dem Burgerswanderweg bis zum Aussichtsturm 'Schöne Aussicht'." },
-            { id: 4, name: "4. Paradies Dippmannsdorf", x: 1340, y: 275, description: "Hier scheint sich die einigen Dutzend Quellen glaskares Wasser, das die Mühlenbäche speist. Der sonstigen Buchen, Eichen und Birken bestehende Quellkopf wurde sprachlich erschlossen. Ein Spaziergang lohnt sich zu jeder Jahreszeit und lässt sich gut mit einer Wanderung auf dem Kinderferienflugplad verlieren - dem den hier auf dem Burgen-wanderweg verlauft." },
-            { id: 5, name: "5. Töpferort Görzke", x: 415, y: 495, description: "Ein Besuch der kleinen Museen und des Hafischens auf dem Handwerkerhof, ein kleiner Bummel entlang der Bauernhöfe hinüber zum Städtchen Ziesar und die Einkaufsmöglichkeiten in fuuf Töpfereien können die Besucher des Flämingdorfes. Auf dem Töpferwanderweg werden Wandernde mit weit-läufigen Ausblicken auf das Tal der Buckau und die umliegende Fläminglandschaft belohnt." },
-            { id: 6, name: "6. Hagelberg", x: 955, y: 725, description: "Der Hagelberg, ein echter 'Zweitausender', lädt zum Ein-stieg ins Gipfelbuch ein - nicht ohne Grund wird der Land-strich rings um Klein Glien auch 'Klein-Mittelgebirge' genannt. Für das 'Aufstieg' zum Gipfelkreuz wird mit einem Ausblick auf schönen Blick über die Fläminglandschaft belohnt. Unweit davon öffnet am Wochenende auf dem historischen Gasthof in Klein Glien ein Café für Ausflugsinnen und Ausflüger." },
-            { id: 7, name: "7. Bad Belzig mit Burg Eisenhardt", x: 1364, y: 605, description: "Auf der komplett erhaltenen, die 1000-jährige Geschichte der Stadt hautnah erlunden. Vom Butterturm bietet sich wohl der schönste Ausblick auf Stadt und Urstromtal. Unterhalb der Burg befindet sich die Burgwiesen, auf denen die bedrohfreie trachten Großtrappen einen stillen Unterschlupf weckt. In der SteinTherme sorgt jodihaltiges Thermalwasser für gesunde Entspannung." },
-            { id: 8, name: "8. Aussichtspunkt Belziger Landschaftswiesen", x: 1575, y: 555, description: "Am Burgenwanderweg 43 gelegen, liest sich ein besonders eindrückender Blick in das Niederungsgebiet der Belziger Land-schaftswiesen. Dort befindet sich eines der wichtigsten Vogelschutzgebiete Brandenburgs. Wenn im Winterhalbjahr Großtrappen pflichtliche Nahrung suchen, bieten sich vom Rastplatz aus sehr gute Beobachtungsmög-lichkeiten." },
-            { id: 9, name: "9. Wiesenburg mit Schloss und Park", x: 765, y: 855, description: "Das Schloss erhebt sich heute über das Westende des 19. Jahrhunderts. Vom Schlossturm hat man eine ein-druckvolle Aussicht auf Wiesenburg und seinen Parkburg. Der aufstützende als Landschaftspark gestaltete Schlosspark ist der bedeutendste Aussage seiner Art im Hohen Fläming und lädt zum ausgiebigen Samsaui und Wohlritz. Bis zum Bahnhof erstrekt sich diese Anlage, durch die aus dem Kunstwanderweg führt." },
-            { id: 10, name: "10. Naturparkzentrum Hoher Fläming", x: 1165, y: 1370, description: "Das Besucherinformationszentrum ist eine zentrale Anlauf-stelle für alle Gäste. Hier erhält man die besten Tipps für Ausflüge in und durch Hohen Fläming und kann Fahrräder ausleihen. Neben dem Fläming-Laden mit regionalen Produkten lädt eine spannenrde Naturparkzentrums ausstellung und einen 'Garten der Sinne'. Direkt vor dem Naturparkzentrum hält der Bus der genannten." },
-            { id: 11, name: "11. Raben mit Burg Rabenstein", x: 1120, y: 1333, description: "Auf der Raben blicken 'legen' legt die süchlichste der Fläming-burgen, die Hohenburg Rabenstein. Von der Burg führt ein Friedlingspfad durch das Naturschutzgebiet Rabenstein hinunter ins Dorf und bis zum Naturparkzentrum. Die topsteller offene Feldsein-kirche kann auch besucht werden. Der Gasthof Hemmerling be-wirtet täglich außer montags seine Gäste." },
-            { id: 12, name: "12. Niemegk", x: 1620, y: 1140, description: "Das Städtchen Niemegk und das alte Rathaus prägen das Stadtbild um. Vom Kirchturm bietet sich ein schöner Ausblick auf die Hauptarten des Flämings. Ein greßganter Wasserkrum, der heute ein Brausmuseum, einen Regionalladen und eine Lederungskultur behenbergs, liegen am südlichen Rand der Stadt ganz auf dem Brandwanderweg 44. Ein Ausflug mit dem Rad lohnt sich von Niemeck aus auf die Feldsteinkirchen-radroute, die zu sieben flämingstypischen Kunstensteinsten führt." },
-            { id: 13, name: "13. Flämingbuchen", x: 650, y: 1174, description: "In dem großen Waldgebiet der Brandhelfe sind einige Inseln aus Buchen zu finden, wie in den Naturschutz-gebieten 'Flämingbuchen' und 'Spring'. Die Buchen-wanderwegen 70 oder 71 lassen sich diese landschaft-lichen Besonderheiten des Naturparks ertesten. Startpunkte sind die Bahnhöfe Medewitz und Merkenburg." },
-            { id: 14, name: "14. Brautrummel mit Riesenstein", x: 1095, y: 995, description: "Wie ein kleiner Scetchel erfrrank im junges Brautpaar nach einem Gewitterregen in der Rummel, einem Trockental. Heute kann man auf einer Rundwanderung zum Rie-senste8n die besondere Natur in der Rummel erleben, Familienfotos auf dem Riesen-stein schleifen, ein Picknick im Grünen genießen und anschlie-ßend ein Nickerchen auf dem großen Feldbreit machen." },
-            { id: 15, name: "15. Neuendorfer Rummel", x: 1400, y: 1340, description: "Die Rummeln, verzweigte, enge Trockentälchen, entstan-den nach Regien, Birnen und Weiden der Eiszeit. In Zeiten stetig weiter vereist. Wie grüne, bewaldete Finger stie-chen sie sich weit in die Agrarlandschaft hinein. Über den Burgenwanderweg oder den Rundwanderweg 40 kann man die üppig bewach-sene und stellengeise Neuen-dorfer Rummel durchwandern." },
-            { id: 16, name: "16. Garrey mit Aussichtsplattform", x: 1490, y: 1430, description: "Die Landschaft rings um Garrey bietet fantastische Ausblicke, weite Täler und steile, aufgeschnittene Naturpfade. Deshalb 'krönt' eine Aussichtsplattform das alte Wasserwerk, das aufundig restauriert wurde und dem sich eine kleine Ausstellung befindet. Der Ausflug lässt sich sehr gut mit einer Wanderung in die Neuendorfer Rummel und einer Einkehr ins Café Leh-mann in Garrey verbinden." }
+            { id: 1, name: "Stadt und Burg Ziesar", x: -200, z: -150, visited: false },
+            { id: 2, name: "Gutspark Dahlen", x: -100, z: -100, visited: false },
+            { id: 3, name: "Klein Briesener Bach", x: 0, z: -150, visited: false },
+            { id: 4, name: "Paradies Dippmannsdorf", x: 100, z: -100, visited: false },
+            { id: 5, name: "Töpferort Görzke", x: -150, z: 0, visited: false },
+            { id: 6, name: "Hagelberg", x: -50, z: 50, visited: false },
+            { id: 7, name: "Bad Belzig", x: 150, z: 0, visited: false },
+            { id: 8, name: "Belziger Landschaftswiesen", x: 200, z: -50, visited: false },
+            { id: 9, name: "Wiesenburg", x: -100, z: 100, visited: false },
+            { id: 10, name: "Naturparkzentrum", x: 0, z: 150, visited: false },
+            { id: 11, name: "Raben mit Burg Rabenstein", x: 50, z: 180, visited: false },
+            { id: 12, name: "Niemegk", x: 180, z: 100, visited: false },
+            { id: 13, name: "Flämingbuchen", x: -180, z: 150, visited: false },
+            { id: 14, name: "Brautrummel", x: 0, z: 0, visited: false },
+            { id: 15, name: "Neuendorfer Rummel", x: 100, z: 180, visited: false },
+            { id: 16, name: "Garrey", x: 150, z: 200, visited: false }
         ];
 
-        // --- GAME STATE ---
-        const state = {
-            helicopter: {
-                position: new THREE.Vector3(0, 10, 0),
-                velocity: new THREE.Vector3(),
-                angle: -Math.PI / 2,
-                speed: 0,
-                altitude: 10,
-            },
-            input: { keys: new Set(), joystick: { active: false, angle: 0, magnitude: 0 } },
-            pois: POI_DATA.map(p => ({ ...p, visited: false, object3D: null })),
-            nearbyPOI: null,
+        // ============= GAME STATE =============
+        const gameState = {
+            keys: {},
+            mouseDown: false,
+            mouseX: 0,
+            mouseY: 0,
+            velocity: new THREE.Vector3(),
+            angularVelocity: 0,
+            altitude: 10,
+            speed: 0,
+            heading: 0,
             visitedCount: 0,
-            gameActive: false,
-            startTime: 0,
-            elapsedTime: 0,
-            stats: { maxSpeed: 0, landings: 0, totalDistance: 0 },
-            achievements: new Set(),
+            nearPOI: null
         };
 
-        // --- DOM & 3D OBJECTS ---
-        const dom = {};
-        const three = {};
-
-        // --- INITIALIZATION ---
-        function init() {
-            cacheDOM();
-            init3D();
-            initAudio();
-            createPOIMarkers3D();
-            populatePOIList();
-            setupEventListeners();
-            
-            three.loadingManager.onLoad = () => {
-                dom.loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                    dom.loadingScreen.style.display = 'none';
-                    state.gameActive = true;
-                    state.startTime = Date.now();
-                    requestAnimationFrame(gameLoop);
-                }, 500);
-            };
-        }
-
-        function cacheDOM() {
-            const ids = [
-                'loading-screen', 'hud-container', 'speed-display', 'altitude-display', 'poi-count', 'time-display',
-                'heading-display', 'compass', 'compass-needle', 'controls-container', 'joystick-container',
-                'joystick-base', 'joystick-handle', 'land-button', 'menu-button', 'menu-container',
-                'menu-close', 'menu-title', 'poi-list', 'stat-distance', 'stat-max-speed', 'stat-landings',
-                'stat-completion', 'poi-modal', 'modal-icon', 'poi-modal-title', 'poi-modal-description',
-                'modal-visit-time', 'modal-poi-number', 'continue-button', 'next-poi-button',
-                'completion-modal', 'final-time', 'final-distance', 'final-speed', 'restart-button',
-                'explore-button', 'achievement-toast', 'achievement-text', 'minimap', 'minimap-canvas'
-            ];
-            ids.forEach(id => dom[id.replace(/-(\w)/g, (m, g) => g.toUpperCase())] = document.getElementById(id));
-            dom.gameContainer = document.getElementById('game-container');
-        }
-
-        function init3D() {
-            three.scene = new THREE.Scene();
-            three.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-            three.renderer = new THREE.WebGLRenderer({ antialias: true });
-            three.renderer.setSize(window.innerWidth, window.innerHeight);
-            three.renderer.setPixelRatio(window.devicePixelRatio);
-            three.renderer.shadowMap.enabled = true;
-            dom.gameContainer.appendChild(three.renderer.domElement);
-
-            three.loadingManager = new THREE.LoadingManager();
-            const textureLoader = new THREE.TextureLoader(three.loadingManager);
-
-            // Lighting
-            three.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(100, 100, 50);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            three.scene.add(dirLight);
-
-            // Sky
-            three.scene.background = new THREE.Color(0x87ceeb);
-            three.scene.fog = new THREE.Fog(0x87ceeb, 100, 2000);
-
-            // Terrain
-            const mapTexture = textureLoader.load('images/map.jpg');
-            const terrainGeometry = new THREE.PlaneGeometry(CONFIG.MAP_WIDTH, CONFIG.MAP_HEIGHT, 1, 1);
-            const terrainMaterial = new THREE.MeshStandardMaterial({ map: mapTexture });
-            three.terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-            three.terrain.rotation.x = -Math.PI / 2;
-            three.terrain.receiveShadow = true;
-            three.scene.add(three.terrain);
-
-            // Helicopter
-            createHelicopter3D();
-        }
+        // ============= SCENE SETUP =============
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x87CEEB, 100, 1000);
         
-        function createHelicopter3D() {
-            three.helicopter = new THREE.Group();
-            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xd9534f });
+        const camera = new THREE.PerspectiveCamera(
+            75, 
+            window.innerWidth / window.innerHeight, 
+            0.1, 
+            2000
+        );
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // ============= LIGHTING =============
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(100, 100, 50);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        scene.add(directionalLight);
+
+        // ============= SKY =============
+        const skyGeometry = new THREE.SphereGeometry(800, 32, 32);
+        const skyMaterial = new THREE.MeshBasicMaterial({
+            color: 0x87CEEB,
+            side: THREE.BackSide
+        });
+        const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+        scene.add(sky);
+
+        // ============= TERRAIN =============
+        const textureLoader = new THREE.TextureLoader();
+        
+        // Create terrain with map texture
+        const terrainGeometry = new THREE.PlaneGeometry(CONFIG.MAP_SIZE, CONFIG.MAP_SIZE, 50, 50);
+        
+        // Try to load the map image, fallback to colored terrain if it fails
+        const mapUrl = 'https://raw.githubusercontent.com/Mikieb1982/Hoher-Flaeming-Helicopter-Ride/main/images/map.jpg';
+        
+        textureLoader.load(
+            mapUrl,
+            // Success callback
+            (texture) => {
+                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                const terrainMaterial = new THREE.MeshLambertMaterial({
+                    map: texture,
+                    side: THREE.DoubleSide
+                });
+                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+                terrain.rotation.x = -Math.PI / 2;
+                terrain.receiveShadow = true;
+                scene.add(terrain);
+            },
+            // Progress callback
+            undefined,
+            // Error callback - use fallback green terrain
+            (error) => {
+                console.log('Map image not available, using procedural terrain');
+                
+                // Add some hills to the geometry
+                const vertices = terrainGeometry.attributes.position.array;
+                for (let i = 0; i < vertices.length; i += 3) {
+                    const x = vertices[i];
+                    const y = vertices[i + 1];
+                    vertices[i + 2] = Math.sin(x * 0.02) * Math.cos(y * 0.02) * 5 + Math.random() * 1;
+                }
+                terrainGeometry.computeVertexNormals();
+                
+                const terrainMaterial = new THREE.MeshLambertMaterial({
+                    color: 0x3a8b3a,
+                    side: THREE.DoubleSide
+                });
+                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+                terrain.rotation.x = -Math.PI / 2;
+                terrain.receiveShadow = true;
+                scene.add(terrain);
+            }
+        );
+
+        // ============= HELICOPTER =============
+        const helicopter = new THREE.Group();
+        
+        // Body
+        const bodyGeometry = new THREE.BoxGeometry(2, 1.5, 4);
+        const bodyMaterial = new THREE.MeshPhongMaterial({
+            color: 0xc94a4a
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.75;
+        body.castShadow = true;
+        helicopter.add(body);
+        
+        // Cockpit
+        const cockpitGeometry = new THREE.SphereGeometry(1, 8, 6);
+        const cockpitMaterial = new THREE.MeshPhongMaterial({
+            color: 0x333333,
+            opacity: 0.8,
+            transparent: true
+        });
+        const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+        cockpit.position.set(0, 1, 1.5);
+        cockpit.scale.set(0.8, 0.6, 1);
+        helicopter.add(cockpit);
+        
+        // Tail
+        const tailGeometry = new THREE.CylinderGeometry(0.15, 0.4, 3);
+        const tailMaterial = new THREE.MeshPhongMaterial({
+            color: 0xc94a4a
+        });
+        const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+        tail.position.set(0, 0.6, -3);
+        tail.rotation.x = Math.PI / 2;
+        tail.castShadow = true;
+        helicopter.add(tail);
+        
+        // Main Rotor
+        const mainRotorGroup = new THREE.Group();
+        const rotorGeometry = new THREE.BoxGeometry(10, 0.1, 0.4);
+        const rotorMaterial = new THREE.MeshPhongMaterial({
+            color: 0x444444
+        });
+        const mainRotor = new THREE.Mesh(rotorGeometry, rotorMaterial);
+        mainRotorGroup.add(mainRotor);
+        
+        const mainRotor2 = mainRotor.clone();
+        mainRotor2.rotation.y = Math.PI / 2;
+        mainRotorGroup.add(mainRotor2);
+        
+        mainRotorGroup.position.y = 2;
+        helicopter.add(mainRotorGroup);
+        
+        // Tail Rotor
+        const tailRotorGroup = new THREE.Group();
+        const tailRotorGeometry = new THREE.BoxGeometry(0.1, 1.5, 0.1);
+        const tailRotor = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
+        tailRotorGroup.add(tailRotor);
+        tailRotorGroup.position.set(0.3, 0.6, -4.5);
+        helicopter.add(tailRotorGroup);
+        
+        // Start position
+        helicopter.position.set(0, 10, 0);
+        scene.add(helicopter);
+
+        // ============= POI MARKERS =============
+        const poiMeshes = [];
+        
+        POI_DATA.forEach((poi, index) => {
+            const group = new THREE.Group();
             
-            const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), bodyMaterial);
-            body.position.y = 0.5;
-            three.helicopter.add(body);
-
-            const cockpit = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0xcccccc }));
-            cockpit.position.set(0, 0.75, 1.5);
-            three.helicopter.add(cockpit);
-
-            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 3), bodyMaterial);
-            tail.position.set(0, 0.5, -3.5);
-            three.helicopter.add(tail);
-
-            const rotorMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
-            three.mainRotor = new THREE.Mesh(new THREE.BoxGeometry(8, 0.1, 0.2), rotorMaterial);
-            three.mainRotor.position.y = 1.5;
-            three.helicopter.add(three.mainRotor);
-
-            three.helicopter.scale.set(1.5, 1.5, 1.5);
-            three.helicopter.castShadow = true;
-            three.scene.add(three.helicopter);
-        }
-
-        function createPOIMarkers3D() {
-            const poiGeometry = new THREE.CylinderGeometry(5, 5, 2, 16);
-            const beaconGeometry = new THREE.SphereGeometry(2, 8, 8);
-
-            state.pois.forEach(poi => {
-                const poiMaterial = new THREE.MeshBasicMaterial({ color: 0xc94a4a, transparent: true, opacity: 0.5 });
-                const beaconMaterial = new THREE.MeshBasicMaterial({ color: 0xffdd00 });
-
-                const group = new THREE.Group();
-                const cylinder = new THREE.Mesh(poiGeometry, poiMaterial);
-                const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
-                beacon.position.y = 5;
-                group.add(cylinder);
-                group.add(beacon);
-                
-                // Convert 2D map coords to 3D world coords
-                const x = (poi.x / CONFIG.MAP_WIDTH - 0.5) * CONFIG.MAP_WIDTH;
-                const z = (poi.y / CONFIG.MAP_HEIGHT - 0.5) * CONFIG.MAP_HEIGHT;
-                group.position.set(x, 1, z);
-                
-                poi.object3D = group;
-                three.scene.add(group);
+            // Platform
+            const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.5, 16);
+            const platformMaterial = new THREE.MeshPhongMaterial({
+                color: 0xFF6600
             });
+            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.receiveShadow = true;
+            group.add(platform);
+            
+            // Pole
+            const poleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 10);
+            const poleMaterial = new THREE.MeshPhongMaterial({
+                color: 0x666666
+            });
+            const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+            pole.position.y = 5;
+            group.add(pole);
+            
+            // Flag
+            const flagGeometry = new THREE.PlaneGeometry(3, 2);
+            const flagMaterial = new THREE.MeshPhongMaterial({
+                color: 0xFFFF00,
+                side: THREE.DoubleSide
+            });
+            const flag = new THREE.Mesh(flagGeometry, flagMaterial);
+            flag.position.set(1.5, 9, 0);
+            group.add(flag);
+            
+            // Number sprite
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(poi.id.toString(), 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.y = 12;
+            sprite.scale.set(3, 3, 1);
+            group.add(sprite);
+            
+            group.position.set(poi.x, 0.25, poi.z);
+            group.userData = { poi: poi, flag: flag, platform: platform };
+            scene.add(group);
+            poiMeshes.push(group);
+        });
+
+        // ============= TREES =============
+        function createTrees() {
+            const treeCount = 100;
+            const treeGeometry = new THREE.ConeGeometry(3, 10, 8);
+            const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x0f5f0f });
+            const trunkGeometry = new THREE.CylinderGeometry(0.8, 0.8, 3);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            
+            for (let i = 0; i < treeCount; i++) {
+                const tree = new THREE.Group();
+                
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.y = 1.5;
+                tree.add(trunk);
+                
+                const foliage = new THREE.Mesh(treeGeometry, treeMaterial);
+                foliage.position.y = 8;
+                foliage.castShadow = true;
+                tree.add(foliage);
+                
+                // Random position avoiding POIs
+                let x, z, validPosition;
+                do {
+                    x = (Math.random() - 0.5) * CONFIG.MAP_SIZE * 0.9;
+                    z = (Math.random() - 0.5) * CONFIG.MAP_SIZE * 0.9;
+                    validPosition = true;
+                    
+                    for (let poi of POI_DATA) {
+                        const dist = Math.sqrt((x - poi.x) ** 2 + (z - poi.z) ** 2);
+                        if (dist < 20) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                } while (!validPosition);
+                
+                tree.position.set(x, 0, z);
+                scene.add(tree);
+            }
         }
+        createTrees();
+
+        // ============= EVENT LISTENERS =============
+        document.addEventListener('keydown', (e) => {
+            // Map both arrow keys and WASD for compatibility
+            const key = e.key.toLowerCase();
+            
+            if (e.key === 'ArrowUp' || key === 'w') gameState.keys['forward'] = true;
+            if (e.key === 'ArrowDown' || key === 's') gameState.keys['backward'] = true;
+            if (e.key === 'ArrowLeft' || key === 'a') gameState.keys['left'] = true;
+            if (e.key === 'ArrowRight' || key === 'd') gameState.keys['right'] = true;
+            if (e.key === ' ') {
+                gameState.keys['up'] = true;
+                e.preventDefault(); // Prevent page scroll
+            }
+            if (e.key === 'Shift') gameState.keys['down'] = true;
+            if (key === 'l') gameState.keys['land'] = true;
+        });
         
-        // --- EVENT LISTENERS & UI ---
-        // (This section remains largely the same, adapted for 3D state)
-        function setupEventListeners() { /* ... same as before, but calls startAudio on first interaction ... */ }
-        function populatePOIList() { /* ... same as before ... */ }
-        function handleKeyDown(e) { /* ... same as before ... */ }
-        function handleKeyUp(e) { /* ... same as before ... */ }
-        function handleJoystickStart(e) { /* ... same as before ... */ }
-        // ... and so on for all UI and input functions.
-
-        // --- GAME LOOP ---
-        const clock = new THREE.Clock();
-        function gameLoop() {
-            const delta = clock.getDelta();
-            if (state.gameActive) {
-                update(delta);
-            }
-            render();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function update(dt) {
-            updateHelicopter(dt);
-            updateCamera();
-            checkPOIProximity();
-            updateAudio();
-            updateStats(dt);
-        }
-
-        function updateHelicopter(dt) {
-            const heli = state.helicopter;
-            let thrust = 0, turning = 0, climb = 0;
-
-            // Keyboard input
-            if (state.input.keys.has('w') || state.input.keys.has('arrowup')) thrust = 1;
-            if (state.input.keys.has('s') || state.input.keys.has('arrowdown')) thrust = -0.5;
-            if (state.input.keys.has('a') || state.input.keys.has('arrowleft')) turning = 1;
-            if (state.input.keys.has('d') || state.input.keys.has('arrowright')) turning = -1;
-            if (state.input.keys.has(' ')) climb = 1;
-            if (state.input.keys.has('shift')) climb = -1;
-
-            // Joystick input
-            if (state.input.joystick.active && state.input.joystick.magnitude > 0.1) {
-                thrust = state.input.joystick.magnitude;
-                const targetAngle = state.input.joystick.angle;
-                let angleDiff = targetAngle - heli.angle;
-                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                turning = -Math.max(-1, Math.min(1, angleDiff / (Math.PI / 4)));
-            }
-
-            heli.angle += turning * CONFIG.TURN_SPEED * dt;
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
             
-            const accel = thrust * CONFIG.ACCELERATION;
-            const forwardVector = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), heli.angle);
-            heli.velocity.add(forwardVector.multiplyScalar(accel * dt));
-
-            // Vertical movement
-            heli.velocity.y += climb * CONFIG.CLIMB_SPEED * dt;
-            if (climb === 0 && heli.position.y > 1) { // Gravity
-                 heli.velocity.y -= 0.1 * dt;
+            if (e.key === 'ArrowUp' || key === 'w') gameState.keys['forward'] = false;
+            if (e.key === 'ArrowDown' || key === 's') gameState.keys['backward'] = false;
+            if (e.key === 'ArrowLeft' || key === 'a') gameState.keys['left'] = false;
+            if (e.key === 'ArrowRight' || key === 'd') gameState.keys['right'] = false;
+            if (e.key === ' ') gameState.keys['up'] = false;
+            if (e.key === 'Shift') gameState.keys['down'] = false;
+            if (key === 'l') gameState.keys['land'] = false;
+        });
+        
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            gameState.mouseDown = true;
+            gameState.mouseX = e.clientX;
+            gameState.mouseY = e.clientY;
+        });
+        
+        renderer.domElement.addEventListener('mouseup', () => {
+            gameState.mouseDown = false;
+        });
+        
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (gameState.mouseDown) {
+                const deltaX = e.clientX - gameState.mouseX;
+                const deltaY = e.clientY - gameState.mouseY;
+                
+                // Rotate camera around helicopter
+                const angle = helicopter.rotation.y + deltaX * 0.01;
+                const distance = CONFIG.CAMERA_DISTANCE;
+                const height = CONFIG.CAMERA_HEIGHT - deltaY * 0.1;
+                
+                camera.position.x = helicopter.position.x + Math.sin(angle) * distance;
+                camera.position.z = helicopter.position.z + Math.cos(angle) * distance;
+                camera.position.y = helicopter.position.y + height;
+                
+                gameState.mouseX = e.clientX;
+                gameState.mouseY = e.clientY;
             }
+        });
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-            heli.velocity.multiplyScalar(Math.pow(CONFIG.DRAG, dt));
+        // ============= UPDATE FUNCTIONS =============
+        function updateHelicopter(delta) {
+            // Handle input
+            let thrust = 0;
+            let turn = 0;
+            let climb = 0;
             
-            heli.position.add(heli.velocity.clone().multiplyScalar(dt));
-
+            if (gameState.keys['forward']) thrust = CONFIG.MOVEMENT_SPEED;
+            if (gameState.keys['backward']) thrust = -CONFIG.MOVEMENT_SPEED * 0.5;
+            if (gameState.keys['left']) turn = CONFIG.TURN_SPEED;
+            if (gameState.keys['right']) turn = -CONFIG.TURN_SPEED;
+            if (gameState.keys['up']) climb = CONFIG.CLIMB_SPEED;
+            if (gameState.keys['down']) climb = -CONFIG.CLIMB_SPEED;
+            
+            // Apply rotation
+            helicopter.rotation.y += turn * delta;
+            gameState.heading = helicopter.rotation.y;
+            
+            // Apply thrust (in local space)
+            const forward = new THREE.Vector3(0, 0, -1);
+            forward.applyQuaternion(helicopter.quaternion);
+            gameState.velocity.add(forward.multiplyScalar(thrust * delta));
+            
+            // Apply climb
+            gameState.velocity.y += climb * delta;
+            
+            // Apply drag
+            gameState.velocity.multiplyScalar(0.95);
+            
+            // Update position
+            helicopter.position.add(gameState.velocity.clone().multiplyScalar(delta));
+            
             // Ground collision
-            if (heli.position.y < 1) {
-                heli.position.y = 1;
-                heli.velocity.y = 0;
+            if (helicopter.position.y < 1) {
+                helicopter.position.y = 1;
+                gameState.velocity.y = 0;
             }
             
-            // Update 3D object
-            three.helicopter.position.copy(heli.position);
-            three.helicopter.rotation.y = heli.angle;
-            three.mainRotor.rotation.y += dt * 30 * (heli.speed / CONFIG.MAX_SPEED + 0.1);
-
-            // Update state
-            heli.speed = heli.velocity.length();
-            heli.altitude = heli.position.y;
+            // Height limit
+            if (helicopter.position.y > 200) {
+                helicopter.position.y = 200;
+                gameState.velocity.y = 0;
+            }
+            
+            // Map boundaries
+            const boundary = CONFIG.MAP_SIZE / 2 - 10;
+            helicopter.position.x = Math.max(-boundary, Math.min(boundary, helicopter.position.x));
+            helicopter.position.z = Math.max(-boundary, Math.min(boundary, helicopter.position.z));
+            
+            // Update stats
+            gameState.altitude = Math.round(helicopter.position.y);
+            gameState.speed = Math.round(
+                Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10
+            );
+            
+            // Tilt based on movement
+            helicopter.rotation.z = -turn * 0.3;
+            helicopter.rotation.x = thrust * 0.01;
+            
+            // Animate rotors
+            mainRotorGroup.rotation.y += delta * 20;
+            tailRotorGroup.rotation.z += delta * 30;
         }
-
+        
         function updateCamera() {
-            const offset = new THREE.Vector3(0, 8, 20);
-            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.helicopter.angle);
-            const cameraTarget = state.helicopter.position.clone().add(offset);
-            three.camera.position.lerp(cameraTarget, 0.1);
-            three.camera.lookAt(state.helicopter.position);
-        }
-
-        function checkPOIProximity() {
-            let nearest = null;
-            let minDistance = Infinity;
-
-            state.pois.forEach(poi => {
-                if (poi.visited) {
-                    poi.object3D.visible = false;
-                    return;
-                };
+            if (!gameState.mouseDown) {
+                // Follow helicopter
+                const offset = new THREE.Vector3(0, CONFIG.CAMERA_HEIGHT, CONFIG.CAMERA_DISTANCE);
+                offset.applyQuaternion(helicopter.quaternion);
+                const targetPosition = helicopter.position.clone().add(offset);
                 
-                const distance = state.helicopter.position.distanceTo(poi.object3D.position);
-                poi.object3D.children[1].material.color.set(0xffdd00); // Reset beacon color
-
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearest = poi;
+                camera.position.lerp(targetPosition, 0.1);
+                camera.lookAt(helicopter.position);
+            }
+        }
+        
+        function checkPOIs() {
+            gameState.nearPOI = null;
+            
+            poiMeshes.forEach(mesh => {
+                const poi = mesh.userData.poi;
+                const distance = helicopter.position.distanceTo(mesh.position);
+                
+                if (distance < CONFIG.LANDING_DISTANCE && 
+                    helicopter.position.y < CONFIG.LANDING_HEIGHT &&
+                    !poi.visited) {
+                    
+                    gameState.nearPOI = poi;
+                    
+                    // Land at POI
+                    if (gameState.keys['land']) {
+                        poi.visited = true;
+                        gameState.visitedCount++;
+                        
+                        // Change colors
+                        mesh.userData.platform.material.color.setHex(0x00FF00);
+                        mesh.userData.flag.material.color.setHex(0x00FF00);
+                        
+                        // Update POI list
+                        updatePOIList();
+                        
+                        // Show message
+                        showMessage(`Visited: ${poi.name}`);
+                        
+                        // Check for completion
+                        if (gameState.visitedCount === POI_DATA.length) {
+                            setTimeout(() => {
+                                showMessage("🎉 Mission Complete! All POIs visited!");
+                            }, 2000);
+                        }
+                    }
+                }
+                
+                // Highlight nearby POI
+                if (distance < CONFIG.LANDING_DISTANCE * 2 && !poi.visited) {
+                    mesh.userData.flag.material.emissive = new THREE.Color(0xFFFF00);
+                    mesh.userData.flag.material.emissiveIntensity = 0.5 * (1 + Math.sin(Date.now() * 0.005));
+                } else {
+                    mesh.userData.flag.material.emissive = new THREE.Color(0x000000);
+                    mesh.userData.flag.material.emissiveIntensity = 0;
                 }
             });
-
-            if (nearest && minDistance < CONFIG.LANDING_RADIUS && state.helicopter.altitude < CONFIG.LANDING_ALTITUDE) {
-                state.nearbyPOI = nearest;
-                dom.landButton.classList.add('visible');
-                nearest.object3D.children[1].material.color.set(0x00ff00); // Highlight beacon
-            } else {
-                state.nearbyPOI = null;
-                dom.landButton.classList.remove('visible');
-            }
         }
         
-        function updateStats(dt) {
-            // Update total distance, etc.
-        }
-
-        function render() {
-            // Update UI elements
-            dom.speedDisplay.textContent = (state.helicopter.speed * 10).toFixed(1); // Scale for display
-            dom.altitudeDisplay.textContent = state.helicopter.altitude.toFixed(0);
-            dom.poiCount.textContent = `${state.visitedCount}/16`;
-            dom.timeDisplay.textContent = formatTime(state.elapsedTime);
-            const heading = (state.helicopter.angle * 180 / Math.PI) % 360;
-            dom.headingDisplay.textContent = `${Math.round(heading < 0 ? 360 + heading : heading)}°`;
-            dom.compassNeedle.style.transform = `rotate(${-heading}deg)`;
+        function updateHUD() {
+            document.getElementById('altitude').textContent = gameState.altitude;
+            document.getElementById('speed').textContent = gameState.speed;
+            document.getElementById('visited').textContent = gameState.visitedCount;
             
-            three.renderer.render(three.scene, three.camera);
-        }
-        
-        // --- AUDIO ---
-        function initAudio() { /* ... same as before ... */ }
-        function updateAudio() { /* ... same as before, based on state.helicopter.speed ... */ }
-
-        // --- GAME ACTIONS ---
-        function landAtPOI() {
-            if (!state.nearbyPOI) return;
-            const poi = state.nearbyPOI;
-            if (!poi.visited) {
-                poi.visited = true;
-                state.visitedCount++;
-                // ... update UI, stats, achievements
-                if (state.visitedCount === 16) {
-                    setTimeout(showCompletionModal, 1500);
-                }
+            // Compass heading
+            const degrees = ((gameState.heading * 180 / Math.PI) % 360 + 360) % 360;
+            let heading = 'N';
+            if (degrees > 337.5 || degrees <= 22.5) heading = 'N';
+            else if (degrees > 22.5 && degrees <= 67.5) heading = 'NE';
+            else if (degrees > 67.5 && degrees <= 112.5) heading = 'E';
+            else if (degrees > 112.5 && degrees <= 157.5) heading = 'SE';
+            else if (degrees > 157.5 && degrees <= 202.5) heading = 'S';
+            else if (degrees > 202.5 && degrees <= 247.5) heading = 'SW';
+            else if (degrees > 247.5 && degrees <= 292.5) heading = 'W';
+            else if (degrees > 292.5 && degrees <= 337.5) heading = 'NW';
+            
+            document.getElementById('heading').textContent = `${heading} (${Math.round(degrees)}°)`;
+            
+            // Show landing prompt
+            if (gameState.nearPOI) {
+                showMessage(`Press L to visit: ${gameState.nearPOI.name}`, 100);
             }
-            showPOIModal(poi);
         }
         
-        // --- UTILITY FUNCTIONS ---
-        function formatTime(ms) {
-            if (ms <= 0) return '00:00';
-            const minutes = Math.floor(ms / 60000);
-            const seconds = Math.floor((ms % 60000) / 1000);
-            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        function updatePOIList() {
+            const container = document.getElementById('poi-items');
+            container.innerHTML = '';
+            
+            POI_DATA.forEach(poi => {
+                const div = document.createElement('div');
+                div.className = 'poi-item' + (poi.visited ? ' visited' : '');
+                div.textContent = `${poi.id}. ${poi.name}`;
+                div.onclick = () => {
+                    // Look at POI
+                    const poiMesh = poiMeshes.find(m => m.userData.poi.id === poi.id);
+                    if (poiMesh) {
+                        camera.lookAt(poiMesh.position);
+                    }
+                };
+                container.appendChild(div);
+            });
         }
-
-        // --- START GAME ---
-        init();
         
-        // Dummy functions for UI event handlers to avoid errors
-        function toggleMenu() {}
-        function closeMenu() {}
-        function resumeFlight() { dom.poiModal.classList.remove('active'); state.gameActive = true; }
-        function navigateToNextPOI() {}
-        function restartGame() { location.reload(); }
-        function freeFlightMode() { dom.completionModal.classList.remove('active'); state.gameActive = true; }
-        function showPOIModal(poi) {
-            dom.poiModalTitle.textContent = poi.name;
-            dom.poiModalDescription.textContent = poi.description;
-            dom.modalIcon.textContent = String(poi.id);
-            dom.modalVisitTime.textContent = formatTime(state.elapsedTime);
-            dom.modalPOINumber.textContent = `${state.visitedCount}/16`;
-            dom.poiModal.classList.add('active');
-            state.gameActive = false;
-        }
-        function showCompletionModal() {
-            dom.completionModal.classList.add('active');
-            state.gameActive = false;
+        let messageTimeout;
+        function showMessage(text, duration = 2000) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.style.display = 'block';
+            
+            clearTimeout(messageTimeout);
+            if (duration > 0) {
+                messageTimeout = setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, duration);
+            }
         }
 
+        // ============= GAME LOOP =============
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            updateHelicopter(delta);
+            updateCamera();
+            checkPOIs();
+            updateHUD();
+            
+            renderer.render(scene, camera);
+        }
+
+        // ============= INITIALIZATION =============
+        function init() {
+            // Hide loader
+            document.getElementById('loader').style.display = 'none';
+            
+            // Show UI
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('poi-list').style.display = 'block';
+            
+            // Initialize POI list
+            updatePOIList();
+            
+            // Show welcome message
+            showMessage('Welcome to Hoher Fläming! Explore all 16 POIs!', 5000);
+            
+            // Start game loop
+            animate();
+        }
+
+        // Start after a short delay
+        setTimeout(init, 1000);
     </script>
 </body>
 </html>
