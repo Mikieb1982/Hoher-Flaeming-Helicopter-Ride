@@ -3,10 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Helicopter Game</title>
+    <title>Helicopter Flight Simulator</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #98D8E8);
+        }
+
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
         #loader {
             position: absolute;
             left: 50%;
@@ -14,126 +33,965 @@
             transform: translate(-50%, -50%);
             color: white;
             font-size: 24px;
-            background-color: rgba(0,0,0,0.5);
-            padding: 10px 20px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5));
+            padding: 20px 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            animation: pulse 1.5s ease-in-out infinite;
         }
-        #hud {
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .hud {
             position: absolute;
-            top: 10px;
-            left: 10px;
             color: white;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 16px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5));
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        /* Style for the new controls HUD */
+
+        #stats-hud {
+            top: 20px;
+            left: 20px;
+            min-width: 200px;
+        }
+
         #controls-hud {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            color: white;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 5px;
+            bottom: 20px;
+            left: 20px;
+        }
+
+        #mission-hud {
+            top: 20px;
+            right: 20px;
+            text-align: right;
+        }
+
+        .hud h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hud-item {
+            margin: 5px 0;
             font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        #controls-hud h4 {
-            margin-top: 0;
-            margin-bottom: 5px;
+
+        .hud-value {
+            font-weight: bold;
+            color: #00FF00;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
-        #controls-hud p {
-            margin: 0 0 2px 0;
+
+        .control-key {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 5px;
+            font-weight: bold;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00FF00, #FFD700);
+            border-radius: 3px;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
 <body>
-    <div id="loader">Loading...</div>
-    <div id="hud">
-        <div>Altitude: <span id="altitude">0.0</span> m</div>
-        <div>Landed: <span id="landed-count">0</span> / <span id="landed-total">0</span></div>
+    <div id="loader">Loading Helicopter Simulator...</div>
+    
+    <div id="stats-hud" class="hud" style="display: none;">
+        <h3>Flight Status</h3>
+        <div class="hud-item">
+            <span>Altitude:</span>
+            <span class="hud-value" id="altitude">0</span> m
+        </div>
+        <div class="hud-item">
+            <span>Speed:</span>
+            <span class="hud-value" id="speed">0</span> km/h
+        </div>
+        <div class="hud-item">
+            <span>Fuel:</span>
+            <span class="hud-value" id="fuel">100</span>%
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="fuel-bar" style="width: 100%"></div>
+        </div>
     </div>
-    <!-- New HUD element for controls -->
-    <div id="controls-hud">
-        <h4>Controls</h4>
-        <p><b>W/S or Arrows Up/Down:</b> Forward/Back</p>
-        <p><b>A/D or Arrows Left/Right:</b> Turn</p>
-        <p><b>Space/Page Up:</b> Ascend</p>
-        <p><b>Shift/Page Down:</b> Descend</p>
-        <p><b>Mouse Drag:</b> Look</p>
-    </div>
-    <!-- Load the Three.js library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+    <div id="mission-hud" class="hud" style="display: none;">
+        <h3>Mission Progress</h3>
+        <div class="hud-item">
+            <span>Landing Zones:</span>
+            <span class="hud-value"><span id="landed-count">0</span> / <span id="total-count">5</span></span>
+        </div>
+        <div class="hud-item">
+            <span>Time:</span>
+            <span class="hud-value" id="time">00:00</span>
+        </div>
+        <div class="hud-item">
+            <span>Score:</span>
+            <span class="hud-value" id="score">0</span>
+        </div>
+    </div>
+
+    <div id="controls-hud" class="hud" style="display: none;">
+        <h3>Controls</h3>
+        <div style="font-size: 12px;">
+            <div><span class="control-key">W/↑</span> Forward</div>
+            <div><span class="control-key">S/↓</span> Backward</div>
+            <div><span class="control-key">A/←</span> Turn Left</div>
+            <div><span class="control-key">D/→</span> Turn Right</div>
+            <div><span class="control-key">Space</span> Ascend</div>
+            <div><span class="control-key">Shift</span> Descend</div>
+            <div><span class="control-key">Mouse</span> Look Around</div>
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // --- SCENE SETUP ---
+        // Game Configuration
+        const CONFIG = {
+            GRAVITY: -9.8,
+            MAX_SPEED: 50,
+            ACCELERATION: 20,
+            TURN_SPEED: 1.5,
+            CLIMB_SPEED: 15,
+            FUEL_CONSUMPTION: 0.05,
+            LANDING_THRESHOLD: 2,
+            LANDING_SPEED_THRESHOLD: 5,
+            PARTICLE_COUNT: 200,
+            FOG_DENSITY: 0.002
+        };
+
+        // Game State
+        const gameState = {
+            isLoading: true,
+            isPaused: false,
+            gameStarted: false,
+            gameTime: 0,
+            score: 0,
+            landedCount: 0,
+            fuel: 100,
+            velocity: new THREE.Vector3(),
+            angularVelocity: 0,
+            altitude: 0,
+            speed: 0,
+            particles: [],
+            landingZones: [],
+            trees: [],
+            clouds: []
+        };
+
+        // Scene Setup
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        scene.fog = new THREE.FogExp2(0x87CEEB, CONFIG.FOG_DENSITY);
+        
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance"
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // --- LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(100, 20, 100);
-        scene.add(directionalLight);
-        
-        // --- SKY ---
-        const sky = new THREE.Mesh(
-            new THREE.SphereGeometry(500, 32, 32),
-            new THREE.MeshBasicMaterial({ color: 0x87ceeb, side: THREE.BackSide })
-        );
-        scene.add(sky);
 
-        // --- HELICOPTER ---
-        const helicopter = new THREE.Group();
-        helicopter.position.y = 5; // Start helicopter higher up
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(50, 100, 50);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+
+        const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x545454, 0.4);
+        scene.add(hemisphereLight);
+
+        // Create Sky
+        function createSky() {
+            const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+            const skyMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    topColor: { value: new THREE.Color(0x0077ff) },
+                    bottomColor: { value: new THREE.Color(0xffffff) },
+                    offset: { value: 33 },
+                    exponent: { value: 0.6 }
+                },
+                vertexShader: `
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                        vWorldPosition = worldPosition.xyz;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 topColor;
+                    uniform vec3 bottomColor;
+                    uniform float offset;
+                    uniform float exponent;
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        float h = normalize(vWorldPosition + offset).y;
+                        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+                    }
+                `,
+                side: THREE.BackSide
+            });
+            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+        }
+
+        // Create Terrain
+        function createTerrain() {
+            const geometry = new THREE.PlaneGeometry(400, 400, 50, 50);
+            const vertices = geometry.attributes.position.array;
+            
+            // Add some hills
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const y = vertices[i + 1];
+                vertices[i + 2] = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 3 + 
+                                  Math.random() * 0.5;
+            }
+            
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0x3a5f3a,
+                side: THREE.DoubleSide
+            });
+            
+            const terrain = new THREE.Mesh(geometry, material);
+            terrain.rotation.x = -Math.PI / 2;
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+            
+            return terrain;
+        }
+
+        // Create Helicopter
+        function createHelicopter() {
+            const helicopter = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(2, 1.2, 4);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x1E90FF,
+                specular: 0x222222,
+                shininess: 100
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            helicopter.add(body);
+
+            // Cockpit
+            const cockpitGeometry = new THREE.SphereGeometry(1, 8, 6);
+            const cockpitMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x333333,
+                specular: 0xffffff,
+                shininess: 100,
+                opacity: 0.8,
+                transparent: true
+            });
+            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpit.position.set(0, 0.8, 1.5);
+            cockpit.scale.set(0.8, 0.6, 1);
+            helicopter.add(cockpit);
+
+            // Tail
+            const tailGeometry = new THREE.CylinderGeometry(0.15, 0.4, 3);
+            const tailMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x1E90FF,
+                specular: 0x222222,
+                shininess: 50
+            });
+            const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+            tail.position.set(0, 0.6, -3);
+            tail.rotation.x = Math.PI / 2;
+            tail.castShadow = true;
+            helicopter.add(tail);
+
+            // Main Rotor
+            const rotorGroup = new THREE.Group();
+            const rotorGeometry = new THREE.BoxGeometry(8, 0.1, 0.3);
+            const rotorMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x444444,
+                specular: 0x222222,
+                shininess: 100
+            });
+            const mainRotor = new THREE.Mesh(rotorGeometry, rotorMaterial);
+            mainRotor.castShadow = true;
+            rotorGroup.add(mainRotor);
+            
+            const rotor2 = mainRotor.clone();
+            rotor2.rotation.y = Math.PI / 2;
+            rotorGroup.add(rotor2);
+            
+            rotorGroup.position.y = 1.8;
+            helicopter.add(rotorGroup);
+            helicopter.rotorGroup = rotorGroup;
+
+            // Tail Rotor
+            const tailRotorGroup = new THREE.Group();
+            const tailRotorGeometry = new THREE.BoxGeometry(0.1, 1.5, 0.1);
+            const tailRotor = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
+            tailRotorGroup.add(tailRotor);
+            tailRotorGroup.position.set(0.3, 0.6, -4.5);
+            helicopter.add(tailRotorGroup);
+            helicopter.tailRotorGroup = tailRotorGroup;
+
+            // Landing Skids
+            const skidGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2);
+            const skidMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
+            
+            const leftSkid = new THREE.Mesh(skidGeometry, skidMaterial);
+            leftSkid.position.set(-0.8, -0.5, 0);
+            leftSkid.rotation.z = Math.PI / 2;
+            helicopter.add(leftSkid);
+            
+            const rightSkid = leftSkid.clone();
+            rightSkid.position.x = 0.8;
+            helicopter.add(rightSkid);
+
+            helicopter.position.y = 10;
+            helicopter.castShadow = true;
+            
+            return helicopter;
+        }
+
+        // Create Landing Zones
+        function createLandingZones() {
+            const positions = [
+                { x: 50, z: 50 },
+                { x: -80, z: 30 },
+                { x: 100, z: -100 },
+                { x: -50, z: -75 },
+                { x: 0, z: 120 }
+            ];
+
+            positions.forEach((pos, index) => {
+                const group = new THREE.Group();
+                
+                // Platform
+                const platformGeometry = new THREE.CylinderGeometry(5, 5, 0.5, 16);
+                const platformMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xFF4500,
+                    emissive: 0xFF4500,
+                    emissiveIntensity: 0.2
+                });
+                const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+                platform.receiveShadow = true;
+                group.add(platform);
+
+                // Helipad marking
+                const ringGeometry = new THREE.RingGeometry(3, 4, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFFFFF,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.y = 0.26;
+                group.add(ring);
+
+                // H marking
+                const hGeometry = new THREE.PlaneGeometry(2, 2);
+                const hTexture = createHTexture();
+                const hMaterial = new THREE.MeshBasicMaterial({ 
+                    map: hTexture,
+                    transparent: true
+                });
+                const hMesh = new THREE.Mesh(hGeometry, hMaterial);
+                hMesh.rotation.x = -Math.PI / 2;
+                hMesh.position.y = 0.27;
+                group.add(hMesh);
+
+                // Beacon light
+                const lightGeometry = new THREE.SphereGeometry(0.3);
+                const lightMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xFFFF00,
+                    emissive: 0xFFFF00,
+                    emissiveIntensity: 1
+                });
+                const beacon = new THREE.Mesh(lightGeometry, lightMaterial);
+                beacon.position.y = 1;
+                group.add(beacon);
+
+                // Add point light
+                const pointLight = new THREE.PointLight(0xFFFF00, 0.5, 10);
+                pointLight.position.y = 1;
+                group.add(pointLight);
+
+                group.position.set(pos.x, 0.25, pos.z);
+                group.userData = { 
+                    landed: false, 
+                    index: index,
+                    beacon: beacon,
+                    light: pointLight
+                };
+                
+                scene.add(group);
+                gameState.landingZones.push(group);
+            });
+        }
+
+        // Create H texture for helipad
+        function createHTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 100px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('H', 64, 64);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        // Create Trees
+        function createTrees() {
+            const treeCount = 50;
+            const treeGeometry = new THREE.ConeGeometry(2, 8, 8);
+            const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x0f5f0f });
+            const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 2);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+
+            for (let i = 0; i < treeCount; i++) {
+                const tree = new THREE.Group();
+                
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.y = 1;
+                tree.add(trunk);
+                
+                const foliage = new THREE.Mesh(treeGeometry, treeMaterial);
+                foliage.position.y = 5;
+                foliage.castShadow = true;
+                tree.add(foliage);
+                
+                tree.position.set(
+                    (Math.random() - 0.5) * 300,
+                    0,
+                    (Math.random() - 0.5) * 300
+                );
+                
+                // Avoid landing zones
+                let tooClose = false;
+                for (let zone of gameState.landingZones) {
+                    const dist = tree.position.distanceTo(zone.position);
+                    if (dist < 15) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                
+                if (!tooClose) {
+                    scene.add(tree);
+                    gameState.trees.push(tree);
+                }
+            }
+        }
+
+        // Create Clouds
+        function createClouds() {
+            const cloudCount = 15;
+            const cloudGeometry = new THREE.SphereGeometry(1, 8, 6);
+            const cloudMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                opacity: 0.8,
+                transparent: true
+            });
+
+            for (let i = 0; i < cloudCount; i++) {
+                const cloud = new THREE.Group();
+                
+                for (let j = 0; j < 5; j++) {
+                    const sphere = new THREE.Mesh(cloudGeometry, cloudMaterial);
+                    sphere.position.set(
+                        Math.random() * 4 - 2,
+                        Math.random() * 2 - 1,
+                        Math.random() * 4 - 2
+                    );
+                    sphere.scale.setScalar(Math.random() * 2 + 1);
+                    cloud.add(sphere);
+                }
+                
+                cloud.position.set(
+                    (Math.random() - 0.5) * 400,
+                    Math.random() * 50 + 30,
+                    (Math.random() - 0.5) * 400
+                );
+                
+                scene.add(cloud);
+                gameState.clouds.push(cloud);
+            }
+        }
+
+        // Particle System for effects
+        function createParticleSystem() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            
+            for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
+                positions.push(0, 0, 0);
+                colors.push(1, 1, 1);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            return particles;
+        }
+
+        // Initialize Scene
+        const helicopter = createHelicopter();
         scene.add(helicopter);
         
-        const bodyMaterial = new THREE.MeshStandardMaterial({ color: 'skyblue' });
-        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), bodyMaterial);
-        body.position.y = 0.5;
-        helicopter.add(body);
+        createSky();
+        const terrain = createTerrain();
+        createLandingZones();
+        const particles = createParticleSystem();
 
-        const cockpit = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1), new THREE.MeshStandardMaterial({ color: 'white' }));
-        cockpit.position.set(0, 0.75, 1.5);
-        helicopter.add(cockpit);
+        // Camera setup
+        camera.position.set(0, 5, 15);
+        camera.lookAt(helicopter.position);
 
-        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 2), bodyMaterial);
-        tail.position.set(0, 0.5, -3);
-        helicopter.add(tail);
+        // Controls
+        const keys = {};
+        let mouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
 
-        const rotorMaterial = new THREE.MeshStandardMaterial({ color: 'gray' });
-        const mainRotor = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 0.2), rotorMaterial);
-        mainRotor.position.y = 1.5;
-        helicopter.add(mainRotor);
-
-        const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), rotorMaterial);
-        tailRotor.position.set(0.2, 0.5, -4);
-        helicopter.add(tailRotor);
-
-        // --- GAME ELEMENTS ---
-        const landingPoints = [
-            { x: 50, z: 50 },
-            { x: -80, z: 30 },
-            { x: 100, z: -100 },
-            { x: -50, z: -75 },
-            { x: 0, z: 150 },
-        ];
-        const landingPointMeshes = [];
-        let landedCount = 0;
-
-        // --- SCENERY & LANDING POINTS ---
-        const loadingManager = new THREE.LoadingManager(() => {
-            const loadingScreen = document.getElementById('loader');
-            if (loadingScreen) loadingScreen.style.display = 'none';
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ') e.preventDefault();
         });
-        const textureLoader = new THREE.TextureLoader(loadingManager);
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        renderer.domElement.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (mouseDown) {
+                const deltaX = e.clientX - mouseX;
+                const deltaY = e.clientY - mouseY;
+                
+                camera.position.x = helicopter.position.x - Math.sin(deltaX * 0.01) * 20;
+                camera.position.z = helicopter.position.z - Math.cos(deltaX * 0.01) * 20;
+                camera.position.y = Math.max(2, camera.position.y + deltaY * 0.05);
+                
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            }
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Update helicopter physics
+        function updateHelicopter(delta) {
+            if (gameState.fuel <= 0) return;
+
+            // Apply controls
+            if (keys['w'] || keys['arrowup']) {
+                gameState.velocity.z -= CONFIG.ACCELERATION * delta;
+            }
+            if (keys['s'] || keys['arrowdown']) {
+                gameState.velocity.z += CONFIG.ACCELERATION * delta;
+            }
+            if (keys['a'] || keys['arrowleft']) {
+                gameState.angularVelocity = CONFIG.TURN_SPEED;
+            } else if (keys['d'] || keys['arrowright']) {
+                gameState.angularVelocity = -CONFIG.TURN_SPEED;
+            } else {
+                gameState.angularVelocity *= 0.9;
+            }
+            
+            if (keys[' '] || keys['pageup']) {
+                gameState.velocity.y = CONFIG.CLIMB_SPEED;
+                gameState.fuel -= CONFIG.FUEL_CONSUMPTION * 2;
+            } else if (keys['shift'] || keys['pagedown']) {
+                gameState.velocity.y = -CONFIG.CLIMB_SPEED;
+            } else {
+                gameState.velocity.y += CONFIG.GRAVITY * delta;
+            }
+
+            // Apply velocity limits
+            const horizontalSpeed = Math.sqrt(
+                gameState.velocity.x ** 2 + gameState.velocity.z ** 2
+            );
+            if (horizontalSpeed > CONFIG.MAX_SPEED) {
+                const scale = CONFIG.MAX_SPEED / horizontalSpeed;
+                gameState.velocity.x *= scale;
+                gameState.velocity.z *= scale;
+            }
+
+            // Update rotation
+            helicopter.rotation.y += gameState.angularVelocity * delta;
+            
+            // Convert local velocity to world space
+            const worldVelocity = new THREE.Vector3(
+                gameState.velocity.x * Math.sin(helicopter.rotation.y) + 
+                gameState.velocity.z * Math.cos(helicopter.rotation.y),
+                gameState.velocity.y,
+                gameState.velocity.z * Math.sin(helicopter.rotation.y) - 
+                gameState.velocity.x * Math.cos(helicopter.rotation.y)
+            );
+
+            // Update position
+            helicopter.position.add(worldVelocity.clone().multiplyScalar(delta));
+            
+            // Ground collision
+            if (helicopter.position.y < 0.5) {
+                helicopter.position.y = 0.5;
+                gameState.velocity.y = 0;
+            }
+
+            // Apply drag
+            gameState.velocity.multiplyScalar(0.98);
+            
+            // Consume fuel
+            if (horizontalSpeed > 1) {
+                gameState.fuel -= CONFIG.FUEL_CONSUMPTION;
+                gameState.fuel = Math.max(0, gameState.fuel);
+            }
+
+            // Update stats
+            gameState.altitude = Math.round(helicopter.position.y);
+            gameState.speed = Math.round(horizontalSpeed);
+
+            // Animate rotors
+            if (helicopter.rotorGroup) {
+                helicopter.rotorGroup.rotation.y += 0.5;
+            }
+            if (helicopter.tailRotorGroup) {
+                helicopter.tailRotorGroup.rotation.z += 0.8;
+            }
+
+            // Tilt helicopter based on movement
+            helicopter.rotation.z = -gameState.velocity.x * 0.01;
+            helicopter.rotation.x = gameState.velocity.z * 0.01;
+        }
+
+        // Check landing zones
+        function checkLandingZones() {
+            for (let zone of gameState.landingZones) {
+                if (!zone.userData.landed) {
+                    const distance = helicopter.position.distanceTo(zone.position);
+                    
+                    if (distance < 5 && 
+                        helicopter.position.y < CONFIG.LANDING_THRESHOLD &&
+                        gameState.speed < CONFIG.LANDING_SPEED_THRESHOLD) {
+                        
+                        zone.userData.landed = true;
+                        gameState.landedCount++;
+                        gameState.score += 1000;
+                        gameState.fuel = Math.min(100, gameState.fuel + 20); // Refuel bonus
+                        
+                        // Change platform color
+                        zone.children[0].material.color.setHex(0x00FF00);
+                        zone.children[0].material.emissive.setHex(0x00FF00);
+                        
+                        // Pulse effect
+                        zone.userData.beacon.material.color.setHex(0x00FF00);
+                        zone.userData.light.color.setHex(0x00FF00);
+                        zone.userData.light.intensity = 1;
+                        
+                        showMessage("Landing Zone Secured!");
+                        
+                        if (gameState.landedCount === gameState.landingZones.length) {
+                            endGame(true);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update particles
+        function updateParticles() {
+            const positions = particles.geometry.attributes.position.array;
+            const colors = particles.geometry.attributes.color.array;
+            
+            for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
+                const i3 = i * 3;
+                
+                // Create dust effect near helicopter when low
+                if (helicopter.position.y < 5) {
+                    positions[i3] = helicopter.position.x + (Math.random() - 0.5) * 10;
+                    positions[i3 + 1] = Math.random() * 2;
+                    positions[i3 + 2] = helicopter.position.z + (Math.random() - 0.5) * 10;
+                    
+                    colors[i3] = 0.5;
+                    colors[i3 + 1] = 0.4;
+                    colors[i3 + 2] = 0.3;
+                } else {
+                    positions[i3 + 1] += 0.1;
+                    if (positions[i3 + 1] > 10) {
+                        positions[i3 + 1] = 0;
+                    }
+                }
+            }
+            
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.geometry.attributes.color.needsUpdate = true;
+        }
+
+        // Show message
+        function showMessage(text) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 2000);
+        }
+
+        // Update HUD
+        function updateHUD() {
+            document.getElementById('altitude').textContent = gameState.altitude;
+            document.getElementById('speed').textContent = gameState.speed;
+            document.getElementById('fuel').textContent = Math.round(gameState.fuel);
+            document.getElementById('fuel-bar').style.width = gameState.fuel + '%';
+            
+            if (gameState.fuel < 20) {
+                document.getElementById('fuel').style.color = '#FF0000';
+                document.getElementById('fuel-bar').style.background = 'linear-gradient(90deg, #FF0000, #FF6600)';
+            } else if (gameState.fuel < 50) {
+                document.getElementById('fuel').style.color = '#FFD700';
+                document.getElementById('fuel-bar').style.background = 'linear-gradient(90deg, #FFD700, #FFA500)';
+            } else {
+                document.getElementById('fuel').style.color = '#00FF00';
+                document.getElementById('fuel-bar').style.background = 'linear-gradient(90deg, #00FF00, #FFD700)';
+            }
+            
+            document.getElementById('landed-count').textContent = gameState.landedCount;
+            document.getElementById('total-count').textContent = gameState.landingZones.length;
+            document.getElementById('score').textContent = gameState.score;
+            
+            // Update time
+            const minutes = Math.floor(gameState.gameTime / 60);
+            const seconds = Math.floor(gameState.gameTime % 60);
+            document.getElementById('time').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Update camera
+        function updateCamera() {
+            if (!mouseDown) {
+                // Follow helicopter
+                const idealOffset = new THREE.Vector3(0, 8, 20);
+                idealOffset.applyQuaternion(helicopter.quaternion);
+                idealOffset.add(helicopter.position);
+                
+                camera.position.lerp(idealOffset, 0.1);
+                camera.lookAt(helicopter.position);
+            }
+        }
+
+        // Animate environment
+        function animateEnvironment(delta) {
+            // Animate clouds
+            gameState.clouds.forEach(cloud => {
+                cloud.position.x += delta * 2;
+                if (cloud.position.x > 200) {
+                    cloud.position.x = -200;
+                }
+                
+                cloud.children.forEach((sphere, i) => {
+                    sphere.position.y += Math.sin(Date.now() * 0.001 + i) * 0.01;
+                });
+            });
+            
+            // Animate landing zone beacons
+            gameState.landingZones.forEach(zone => {
+                if (!zone.userData.landed) {
+                    zone.userData.beacon.position.y = 1 + Math.sin(Date.now() * 0.003) * 0.2;
+                    zone.userData.light.intensity = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
+                }
+            });
+        }
+
+        // End game
+        function endGame(victory) {
+            gameState.gameStarted = false;
+            
+            if (victory) {
+                const bonusScore = Math.round(gameState.fuel * 10);
+                gameState.score += bonusScore;
+                showMessage(`Mission Complete! Final Score: ${gameState.score}`);
+            } else {
+                showMessage('Out of Fuel! Mission Failed');
+            }
+            
+            setTimeout(() => {
+                if (confirm(`${victory ? 'Victory!' : 'Game Over'}\nScore: ${gameState.score}\nTime: ${document.getElementById('time').textContent}\n\nPlay Again?`)) {
+                    resetGame();
+                }
+            }, 2500);
+        }
+
+        // Reset game
+        function resetGame() {
+            gameState.landedCount = 0;
+            gameState.fuel = 100;
+            gameState.score = 0;
+            gameState.gameTime = 0;
+            gameState.velocity = new THREE.Vector3();
+            gameState.angularVelocity = 0;
+            
+            helicopter.position.set(0, 10, 0);
+            helicopter.rotation.set(0, 0, 0);
+            
+            gameState.landingZones.forEach(zone => {
+                zone.userData.landed = false;
+                zone.children[0].material.color.setHex(0xFF4500);
+                zone.children[0].material.emissive.setHex(0xFF4500);
+                zone.userData.beacon.material.color.setHex(0xFFFF00);
+                zone.userData.light.color.setHex(0xFFFF00);
+            });
+            
+            gameState.gameStarted = true;
+        }
+
+        // Initialize game after loading
+        function initGame() {
+            createTrees();
+            createClouds();
+            
+            // Hide loader
+            document.getElementById('loader').style.display = 'none';
+            
+            // Show HUD
+            document.getElementById('stats-hud').style.display = 'block';
+            document.getElementById('mission-hud').style.display = 'block';
+            document.getElementById('controls-hud').style.display = 'block';
+            
+            gameState.isLoading = false;
+            gameState.gameStarted = true;
+            
+            showMessage('Find and land on all 5 landing zones!');
+        }
+
+        // Animation loop
+        const clock = new THREE.Clock();
         
-        // FIX: The environment was blocking local file loading. 
-        // The image data is now embedded directly into the code as a Base64 string.
-        const mapTextureBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGIwVFBkiPlFRUVRocGhweGigrKCkqMTY3ODk4PGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRo-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoP-GRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRoPGRo
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (gameState.isLoading) return;
+            
+            const delta = clock.getDelta();
+            
+            if (gameState.gameStarted) {
+                gameState.gameTime += delta;
+                
+                updateHelicopter(delta);
+                checkLandingZones();
+                updateParticles();
+                animateEnvironment(delta);
+                
+                if (gameState.fuel <= 0 && gameState.gameStarted) {
+                    endGame(false);
+                }
+            }
+            
+            updateCamera();
+            updateHUD();
+            
+            renderer.render(scene, camera);
+        }
+
+        // Start the game
+        setTimeout(initGame, 1000);
+        animate();
+    </script>
+</body>
+</html>
