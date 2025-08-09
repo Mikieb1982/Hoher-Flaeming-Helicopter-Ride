@@ -10,12 +10,16 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         body {
             font-family: 'Arial', sans-serif;
             overflow: hidden;
             background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            touch-action: none;
         }
 
         #canvas-container {
@@ -87,19 +91,20 @@
         /* HUD */
         #hud {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
             background: rgba(0,0,0,0.7);
             color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
             z-index: 100;
-            min-width: 200px;
+            min-width: 150px;
+            backdrop-filter: blur(10px);
         }
 
         .hud-item {
-            margin: 5px 0;
+            margin: 3px 0;
             display: flex;
             justify-content: space-between;
         }
@@ -113,53 +118,98 @@
             font-weight: bold;
         }
 
-        /* Controls */
-        #controls {
+        /* Joystick Container */
+        #joystick-zone {
             position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            z-index: 100;
+            bottom: 20px;
+            left: 20px;
+            width: 140px;
+            height: 140px;
+            z-index: 200;
+            touch-action: none;
         }
 
-        .control-btn {
+        #joystick-base {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0.7), rgba(0,0,0,0.4));
+            border: 3px solid rgba(0,255,0,0.5);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0,255,0,0.3);
+        }
+
+        #joystick-stick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #0f0, #0a0);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(0,255,0,0.8);
+            transition: none;
+            pointer-events: none;
+        }
+
+        /* Action Buttons */
+        #action-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .action-btn {
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            background: rgba(0,0,0,0.7);
+            background: radial-gradient(circle, rgba(0,0,0,0.7), rgba(0,0,0,0.4));
             color: white;
-            border: 2px solid #0f0;
+            border: 3px solid rgba(0,255,0,0.5);
             font-size: 24px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 20px rgba(0,255,0,0.3);
+            touch-action: none;
         }
 
-        .control-btn:hover {
-            background: rgba(0,255,0,0.2);
-            transform: scale(1.1);
+        .action-btn:active {
+            transform: scale(0.9);
+            background: radial-gradient(circle, rgba(0,255,0,0.3), rgba(0,0,0,0.4));
         }
 
-        .control-btn:active {
-            transform: scale(0.95);
+        .action-btn.altitude-up {
+            background: radial-gradient(circle, rgba(0,100,255,0.7), rgba(0,0,0,0.4));
+            border-color: rgba(0,100,255,0.5);
+        }
+
+        .action-btn.altitude-down {
+            background: radial-gradient(circle, rgba(255,100,0,0.7), rgba(0,0,0,0.4));
+            border-color: rgba(255,100,0,0.5);
         }
 
         /* Mini Map */
         #minimap {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 150px;
-            height: 150px;
+            top: 10px;
+            right: 10px;
+            width: 120px;
+            height: 120px;
             background: rgba(0,0,0,0.7);
-            border: 2px solid #0f0;
-            border-radius: 10px;
+            border: 2px solid rgba(0,255,0,0.5);
+            border-radius: 8px;
             z-index: 100;
             overflow: hidden;
+            backdrop-filter: blur(10px);
         }
 
         #minimap-canvas {
@@ -167,62 +217,116 @@
             height: 100%;
         }
 
-        /* Instructions */
+        /* Instructions - Hidden on mobile */
         #instructions {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(0,0,0,0.7);
             color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 12px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 11px;
             z-index: 100;
-            max-width: 250px;
+            text-align: center;
+            backdrop-filter: blur(10px);
         }
 
-        #instructions h3 {
-            margin-bottom: 10px;
-            color: #0f0;
-        }
-
-        #instructions p {
-            margin: 5px 0;
-        }
-
-        /* POI Marker */
-        .poi-marker {
+        /* Score popup */
+        .score-popup {
             position: fixed;
-            color: #ffff00;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,255,0,0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
             font-size: 24px;
+            font-weight: bold;
+            z-index: 500;
+            animation: scorePopup 1s ease-out forwards;
             pointer-events: none;
-            z-index: 90;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Mobile adjustments */
-        @media (max-width: 768px) {
+        @keyframes scorePopup {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -100px) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Mobile/Desktop specific */
+        @media (min-width: 769px) {
+            #joystick-zone {
+                display: none;
+            }
+            #action-buttons {
+                display: none;
+            }
+            #instructions {
+                display: block;
+            }
             #hud {
-                top: 10px;
-                left: 10px;
-                padding: 10px;
-                font-size: 12px;
-                min-width: 150px;
+                top: 20px;
+                left: 20px;
+                padding: 15px;
+                font-size: 14px;
+                min-width: 200px;
             }
-            
             #minimap {
-                width: 100px;
-                height: 100px;
+                width: 150px;
+                height: 150px;
             }
-            
+        }
+
+        @media (max-width: 768px) {
             #instructions {
                 display: none;
             }
-            
-            .control-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
+            .desktop-only {
+                display: none;
+            }
+        }
+
+        /* Landscape mode optimization */
+        @media (max-height: 500px) {
+            #hud {
+                top: 5px;
+                left: 5px;
+                padding: 5px;
+                font-size: 10px;
+                min-width: 120px;
+            }
+            #minimap {
+                width: 80px;
+                height: 80px;
+                top: 5px;
+                right: 5px;
+            }
+            #joystick-zone {
+                width: 100px;
+                height: 100px;
+                bottom: 10px;
+                left: 10px;
+            }
+            .action-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            #action-buttons {
+                bottom: 10px;
+                right: 10px;
             }
         }
     </style>
@@ -267,21 +371,21 @@
         <canvas id="minimap-canvas"></canvas>
     </div>
 
-    <!-- Controls -->
-    <div id="controls">
-        <button class="control-btn" id="up-btn" title="Up">↑</button>
-        <button class="control-btn" id="down-btn" title="Down">↓</button>
-        <button class="control-btn" id="left-btn" title="Left">←</button>
-        <button class="control-btn" id="right-btn" title="Right">→</button>
+    <!-- Mobile Joystick -->
+    <div id="joystick-zone">
+        <div id="joystick-base"></div>
+        <div id="joystick-stick"></div>
     </div>
 
-    <!-- Instructions -->
+    <!-- Mobile Action Buttons -->
+    <div id="action-buttons">
+        <button class="action-btn altitude-up" id="up-btn" title="Up">↑</button>
+        <button class="action-btn altitude-down" id="down-btn" title="Down">↓</button>
+    </div>
+
+    <!-- Desktop Instructions -->
     <div id="instructions">
-        <h3>Controls</h3>
-        <p>🎮 Arrow Keys or Buttons to move</p>
-        <p>📍 Fly to yellow markers for points</p>
-        <p>⛽ Watch your fuel!</p>
-        <p>🏔️ Explore Hoher Fläming region</p>
+        <strong>Controls:</strong> Arrow Keys to move | Q/E for altitude | Collect yellow markers!
     </div>
 
     <script>
@@ -296,7 +400,27 @@
             fuel: 100,
             score: 0,
             position: { x: 0, z: 0 },
-            velocity: { x: 0, z: 0 }
+            velocity: { x: 0, z: 0, y: 0 }
+        };
+
+        // Control states
+        let controls = {
+            forward: false,
+            backward: false,
+            left: false,
+            right: false,
+            up: false,
+            down: false
+        };
+
+        // Joystick variables
+        let joystick = {
+            active: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            maxDistance: 50
         };
 
         // Initialize loading
@@ -336,11 +460,11 @@
             camera.lookAt(0, 0, 0);
 
             // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.setClearColor(0x87CEEB);
+            renderer.setClearColor(0x87CEEB, 1);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
             // Lighting
@@ -368,6 +492,9 @@
             // Setup controls
             setupControls();
 
+            // Setup joystick for mobile
+            setupJoystick();
+
             // Setup minimap
             setupMinimap();
 
@@ -388,7 +515,6 @@
             for (let i = 0; i < vertices.length; i += 3) {
                 const x = vertices[i];
                 const y = vertices[i + 1];
-                // Create hills
                 vertices[i + 2] = Math.sin(x * 0.01) * 20 + Math.cos(y * 0.01) * 20 + Math.random() * 5;
             }
             geometry.computeVertexNormals();
@@ -398,7 +524,7 @@
             terrain.receiveShadow = true;
             scene.add(terrain);
 
-            // Add some trees (simple cones)
+            // Add trees
             for (let i = 0; i < 100; i++) {
                 const treeGeometry = new THREE.ConeGeometry(5, 20, 6);
                 const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x0d5d0d });
@@ -457,14 +583,12 @@
             
             const skid1 = new THREE.Mesh(skidGeometry, skidMaterial);
             skid1.rotation.z = Math.PI / 2;
-            skid1.position.set(0, -5, 0);
-            skid1.position.x = -4;
+            skid1.position.set(-4, -5, 0);
             helicopter.add(skid1);
             
             const skid2 = new THREE.Mesh(skidGeometry, skidMaterial);
             skid2.rotation.z = Math.PI / 2;
-            skid2.position.set(0, -5, 0);
-            skid2.position.x = 4;
+            skid2.position.set(4, -5, 0);
             helicopter.add(skid2);
 
             helicopter.position.y = gameState.altitude;
@@ -482,7 +606,6 @@
             ];
 
             poiData.forEach(poi => {
-                // Create 3D marker
                 const markerGeometry = new THREE.CylinderGeometry(0, 10, 30, 4);
                 const markerMaterial = new THREE.MeshPhongMaterial({ 
                     color: 0xffff00,
@@ -499,319 +622,34 @@
             });
         }
 
-        // Setup controls
+        // Setup keyboard controls
         function setupControls() {
-            const controls = {
-                up: false,
-                down: false,
-                left: false,
-                right: false
-            };
-
             // Keyboard controls
             document.addEventListener('keydown', (e) => {
-                switch(e.key) {
-                    case 'ArrowUp': controls.up = true; break;
-                    case 'ArrowDown': controls.down = true; break;
-                    case 'ArrowLeft': controls.left = true; break;
-                    case 'ArrowRight': controls.right = true; break;
+                switch(e.key.toLowerCase()) {
+                    case 'arrowup':
+                    case 'w':
+                        controls.forward = true;
+                        break;
+                    case 'arrowdown':
+                    case 's':
+                        controls.backward = true;
+                        break;
+                    case 'arrowleft':
+                    case 'a':
+                        controls.left = true;
+                        break;
+                    case 'arrowright':
+                    case 'd':
+                        controls.right = true;
+                        break;
+                    case 'q':
+                        controls.up = true;
+                        break;
+                    case 'e':
+                        controls.down = true;
+                        break;
                 }
             });
 
-            document.addEventListener('keyup', (e) => {
-                switch(e.key) {
-                    case 'ArrowUp': controls.up = false; break;
-                    case 'ArrowDown': controls.down = false; break;
-                    case 'ArrowLeft': controls.left = false; break;
-                    case 'ArrowRight': controls.right = false; break;
-                }
-            });
-
-            // Button controls
-            document.getElementById('up-btn').addEventListener('mousedown', () => controls.up = true);
-            document.getElementById('up-btn').addEventListener('mouseup', () => controls.up = false);
-            document.getElementById('up-btn').addEventListener('touchstart', () => controls.up = true);
-            document.getElementById('up-btn').addEventListener('touchend', () => controls.up = false);
-
-            document.getElementById('down-btn').addEventListener('mousedown', () => controls.down = true);
-            document.getElementById('down-btn').addEventListener('mouseup', () => controls.down = false);
-            document.getElementById('down-btn').addEventListener('touchstart', () => controls.down = true);
-            document.getElementById('down-btn').addEventListener('touchend', () => controls.down = false);
-
-            document.getElementById('left-btn').addEventListener('mousedown', () => controls.left = true);
-            document.getElementById('left-btn').addEventListener('mouseup', () => controls.left = false);
-            document.getElementById('left-btn').addEventListener('touchstart', () => controls.left = true);
-            document.getElementById('left-btn').addEventListener('touchend', () => controls.left = false);
-
-            document.getElementById('right-btn').addEventListener('mousedown', () => controls.right = true);
-            document.getElementById('right-btn').addEventListener('mouseup', () => controls.right = false);
-            document.getElementById('right-btn').addEventListener('touchstart', () => controls.right = true);
-            document.getElementById('right-btn').addEventListener('touchend', () => controls.right = false);
-
-            // Store controls globally
-            window.gameControls = controls;
-        }
-
-        // Setup minimap
-        function setupMinimap() {
-            const canvas = document.getElementById('minimap-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 150;
-            canvas.height = 150;
-
-            window.minimapCtx = ctx;
-        }
-
-        // Update minimap
-        function updateMinimap() {
-            const ctx = window.minimapCtx;
-            if (!ctx) return;
-
-            ctx.fillStyle = '#0a4a0a';
-            ctx.fillRect(0, 0, 150, 150);
-
-            // Draw POIs
-            ctx.fillStyle = '#ffff00';
-            pois.forEach(poi => {
-                if (!poi.userData.collected) {
-                    const x = (poi.position.x / 500) * 75 + 75;
-                    const z = (poi.position.z / 500) * 75 + 75;
-                    ctx.beginPath();
-                    ctx.arc(x, z, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            });
-
-            // Draw helicopter
-            ctx.fillStyle = '#00ff00';
-            const hx = (helicopter.position.x / 500) * 75 + 75;
-            const hz = (helicopter.position.z / 500) * 75 + 75;
-            ctx.beginPath();
-            ctx.arc(hx, hz, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw direction indicator
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(hx, hz);
-            ctx.lineTo(hx + Math.sin(helicopter.rotation.y) * 10, hz - Math.cos(helicopter.rotation.y) * 10);
-            ctx.stroke();
-        }
-
-        // Update game state
-        function updateGame() {
-            const controls = window.gameControls;
-            if (!controls) return;
-
-            // Update velocity based on controls
-            if (controls.up) {
-                gameState.velocity.z = Math.max(gameState.velocity.z - 0.5, -5);
-            }
-            if (controls.down) {
-                gameState.velocity.z = Math.min(gameState.velocity.z + 0.5, 5);
-            }
-            if (controls.left) {
-                gameState.velocity.x = Math.max(gameState.velocity.x - 0.5, -5);
-                helicopter.rotation.z = Math.max(helicopter.rotation.z - 0.02, -0.2);
-            } else if (controls.right) {
-                gameState.velocity.x = Math.min(gameState.velocity.x + 0.5, 5);
-                helicopter.rotation.z = Math.min(helicopter.rotation.z + 0.02, 0.2);
-            } else {
-                helicopter.rotation.z *= 0.95;
-            }
-
-            // Apply friction
-            gameState.velocity.x *= 0.95;
-            gameState.velocity.z *= 0.95;
-
-            // Update position
-            helicopter.position.x += gameState.velocity.x;
-            helicopter.position.z += gameState.velocity.z;
-
-            // Keep helicopter in bounds
-            helicopter.position.x = Math.max(-400, Math.min(400, helicopter.position.x));
-            helicopter.position.z = Math.max(-400, Math.min(400, helicopter.position.z));
-
-            // Update camera to follow helicopter
-            camera.position.x = helicopter.position.x;
-            camera.position.y = helicopter.position.y + 100;
-            camera.position.z = helicopter.position.z + 150;
-            camera.lookAt(helicopter.position);
-
-            // Rotate rotors
-            if (rotorMain) rotorMain.rotation.y += 0.5;
-            if (rotorTail) rotorTail.rotation.z += 0.8;
-
-            // Check POI collection
-            pois.forEach(poi => {
-                if (!poi.userData.collected) {
-                    const distance = helicopter.position.distanceTo(poi.position);
-                    if (distance < 30 && Math.abs(helicopter.position.y - poi.position.y) < 50) {
-                        poi.userData.collected = true;
-                        poi.visible = false;
-                        gameState.score += 100;
-                        gameState.fuel = Math.min(100, gameState.fuel + 20);
-                        showScorePopup(100, poi.userData.name);
-                    }
-                }
-            });
-
-            // Update fuel
-            if (gameState.speed > 0.5) {
-                gameState.fuel = Math.max(0, gameState.fuel - 0.03);
-            }
-            
-            // Calculate speed
-            gameState.speed = Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10;
-
-            // Update HUD
-            document.getElementById('altitude').textContent = Math.round(helicopter.position.y) + 'm';
-            document.getElementById('speed').textContent = Math.round(gameState.speed) + ' km/h';
-            document.getElementById('fuel').textContent = Math.round(gameState.fuel) + '%';
-            document.getElementById('score').textContent = gameState.score;
-
-            // Change fuel color if low
-            const fuelElement = document.getElementById('fuel');
-            if (gameState.fuel < 30) {
-                fuelElement.style.color = '#ff0000';
-            } else if (gameState.fuel < 50) {
-                fuelElement.style.color = '#ffff00';
-            } else {
-                fuelElement.style.color = '#0f0';
-            }
-
-            // Update minimap
-            updateMinimap();
-        }
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            updateGame();
-            
-            // Hover animation
-            const hoverOffset = Math.sin(Date.now() * 0.002) * 2;
-            
-            // Tilt based on movement
-            helicopter.rotation.x = -gameState.velocity.z * 0.05;
-            
-            // Rotate POI markers
-            pois.forEach(poi => {
-                if (!poi.userData.collected) {
-                    poi.rotation.y += 0.02;
-                    poi.position.y = 20 + Math.sin(Date.now() * 0.001 + poi.position.x) * 5;
-                }
-            });
-            
-            renderer.render(scene, camera);
-        }
-
-        // Handle window resize
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            
-            // Update minimap canvas size on resize
-            const canvas = document.getElementById('minimap-canvas');
-            const container = document.getElementById('minimap');
-            if (canvas && container) {
-                const size = container.offsetWidth;
-                canvas.width = size;
-                canvas.height = size;
-            }
-        }
-
-        // Prevent default touch behaviors
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.closest('#joystick-zone') || e.target.closest('#action-buttons')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchmove', function(e) {
-            if (e.target.closest('#joystick-zone') || e.target.closest('#action-buttons')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        // Start the game
-        window.addEventListener('load', startLoading);
-
-        // Prevent zooming on mobile
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        });
-    </script>
-</body>
-</html>(-400, Math.min(400, helicopter.position.z));
-
-            // Update camera to follow helicopter
-            camera.position.x = helicopter.position.x;
-            camera.position.z = helicopter.position.z + 200;
-            camera.lookAt(helicopter.position);
-
-            // Rotate rotors
-            if (rotorMain) rotorMain.rotation.y += 0.5;
-            if (rotorTail) rotorTail.rotation.z += 0.8;
-
-            // Check POI collection
-            pois.forEach(poi => {
-                if (!poi.userData.collected) {
-                    const distance = helicopter.position.distanceTo(poi.position);
-                    if (distance < 30) {
-                        poi.userData.collected = true;
-                        poi.visible = false;
-                        gameState.score += 100;
-                        gameState.fuel = Math.min(100, gameState.fuel + 20);
-                    }
-                }
-            });
-
-            // Update fuel
-            gameState.fuel = Math.max(0, gameState.fuel - 0.02);
-            gameState.speed = Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10;
-
-            // Update HUD
-            document.getElementById('altitude').textContent = Math.round(helicopter.position.y) + 'm';
-            document.getElementById('speed').textContent = Math.round(gameState.speed) + ' km/h';
-            document.getElementById('fuel').textContent = Math.round(gameState.fuel) + '%';
-            document.getElementById('score').textContent = gameState.score;
-
-            // Update minimap
-            updateMinimap();
-        }
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            updateGame();
-            
-            // Hover animation
-            helicopter.position.y = gameState.altitude + Math.sin(Date.now() * 0.002) * 2;
-            
-            // Rotate POI markers
-            pois.forEach(poi => {
-                if (!poi.userData.collected) {
-                    poi.rotation.y += 0.02;
-                }
-            });
-            
-            renderer.render(scene, camera);
-        }
-
-        // Handle window resize
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // Start the game
-        window.addEventListener('load', startLoading);
-    </script>
-</body>
-</html>
+            document.addEventListener('key
