@@ -1,191 +1,313 @@
-// script.js
-
-document.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('gameCanvas');
+window.addEventListener('load', function(){
+    // canvas setup
+    const canvas = document.getElementById('canvas1');
     const ctx = canvas.getContext('2d');
-
-    // Set canvas dimensions
     canvas.width = 800;
-    canvas.height = 600;
+    canvas.height = 500;
 
-    // Game variables
-    let helicopter = {
-        x: 100,
-        y: 250,
-        width: 80,
-        height: 40,
-        vy: 0, // Vertical velocity
-        gravity: 0.3,
-        lift: -7
-    };
-
-    let obstacles = [];
-    let score = 0;
-    let gameOver = false;
-    let frameCount = 0;
-
-    // --- Draw Functions ---
-    function drawHelicopter() {
-        ctx.fillStyle = '#4A90E2'; // Blue color for helicopter
-        // Body
-        ctx.fillRect(helicopter.x, helicopter.y, helicopter.width, helicopter.height);
-        // Cockpit
-        ctx.beginPath();
-        ctx.arc(helicopter.x + helicopter.width, helicopter.y + helicopter.height / 2, helicopter.height / 2, -Math.PI / 2, Math.PI / 2);
-        ctx.fill();
-        // Tail
-        ctx.fillRect(helicopter.x - 20, helicopter.y + 15, 20, 10);
-        // Rotor
-        ctx.fillStyle = '#333';
-        ctx.fillRect(helicopter.x + 20, helicopter.y - 10, 40, 5);
-        ctx.fillRect(helicopter.x + 37.5, helicopter.y - 15, 5, 25);
-    }
-
-    function drawObstacles() {
-        ctx.fillStyle = '#F5A623'; // Orange color for obstacles
-        obstacles.forEach(obstacle => {
-            ctx.fillRect(obstacle.x, 0, obstacle.width, obstacle.topHeight); // Top part
-            ctx.fillRect(obstacle.x, canvas.height - obstacle.bottomHeight, obstacle.width, obstacle.bottomHeight); // Bottom part
-        });
-    }
-
-    function drawScore() {
-        ctx.fillStyle = '#000';
-        ctx.font = '24px Arial';
-        ctx.fillText('Score: ' + score, 10, 30);
-    }
-
-    function drawGameOver() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#FFF';
-        ctx.font = '60px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 40);
-
-        ctx.font = '30px Arial';
-        ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 20);
-
-        ctx.font = '20px Arial';
-        ctx.fillText("Press 'R' to Restart", canvas.width / 2, canvas.height / 2 + 70);
-        ctx.textAlign = 'left'; // Reset alignment
-    }
-
-    // --- Game Logic ---
-    function generateObstacles() {
-        // Generate obstacles every 150 frames
-        if (frameCount % 150 === 0) {
-            const gapHeight = 200;
-            const minHeight = 50;
-            const topHeight = Math.random() * (canvas.height - gapHeight - minHeight * 2) + minHeight;
-            const bottomHeight = canvas.height - topHeight - gapHeight;
-
-            obstacles.push({
-                x: canvas.width,
-                width: 50,
-                topHeight: topHeight,
-                bottomHeight: bottomHeight,
-                speed: 3
+    // --- INPUT HANDLER ---
+    // Handles user input for player movement.
+    class InputHandler {
+        constructor(game){
+            this.game = game;
+            window.addEventListener('keydown', e => {
+                if (((e.key === 'ArrowUp') || (e.key === 'ArrowDown')) && this.game.keys.indexOf(e.key) === -1){
+                    this.game.keys.push(e.key);
+                } else if (e.key === ' '){
+                    this.game.player.shootTop();
+                }
+            });
+            window.addEventListener('keyup', e => {
+                if (this.game.keys.indexOf(e.key) > -1){
+                    this.game.keys.splice(this.game.keys.indexOf(e.key), 1);
+                }
             });
         }
     }
 
-    function checkCollision() {
-        // Helicopter boundaries
-        const heliTop = helicopter.y;
-        const heliBottom = helicopter.y + helicopter.height;
-        const heliLeft = helicopter.x;
-        const heliRight = helicopter.x + helicopter.width;
-
-        // Check for collision with canvas top/bottom
-        if (heliTop < 0 || heliBottom > canvas.height) {
-            gameOver = true;
+    // --- PROJECTILE ---
+    // Defines the projectiles fired by the player.
+    class Projectile {
+        constructor(game, x, y){
+            this.game = game;
+            this.x = x;
+            this.y = y;
+            this.width = 10;
+            this.height = 3;
+            this.speed = 3;
+            this.markedForDeletion = false;
         }
+        update(){
+            this.x += this.speed;
+            if (this.x > this.game.width * 0.8) this.markedForDeletion = true;
+        }
+        draw(context){
+            context.fillStyle = 'yellow';
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
 
-        // Check for collision with obstacles
-        obstacles.forEach(obstacle => {
-            const obsTop = 0;
-            const obsBottomTop = obstacle.topHeight;
-            const obsTopBottom = canvas.height - obstacle.bottomHeight;
-            const obsBottom = canvas.height;
-            const obsLeft = obstacle.x;
-            const obsRight = obstacle.x + obstacle.width;
-
-            if (
-                heliRight > obsLeft &&
-                heliLeft < obsRight &&
-                (heliTop < obsBottomTop || heliBottom > obsTopBottom)
-            ) {
-                gameOver = true;
+    // --- PLAYER ---
+    // Defines the player character.
+    class Player {
+        constructor(game){
+            this.game = game;
+            this.width = 120;
+            this.height = 190;
+            this.x = 20;
+            this.y = 100;
+            this.speedY = 0;
+            this.maxSpeed = 3;
+            this.projectiles = [];
+            this.image = document.getElementById('playerImage');
+        }
+        update(){
+            if (this.game.keys.includes('ArrowUp')) this.speedY = -this.maxSpeed;
+            else if (this.game.keys.includes('ArrowDown')) this.speedY = this.maxSpeed;
+            else this.speedY = 0;
+            this.y += this.speedY;
+            // handle projectiles
+            this.projectiles.forEach(projectile => {
+                projectile.update();
+            });
+            this.projectiles = this.projectiles.filter(projectile => !projectile.markedForDeletion);
+        }
+        draw(context){
+            context.drawImage(this.image, this.x, this.y, this.width, this.height);
+            this.projectiles.forEach(projectile => {
+                projectile.draw(context);
+            });
+        }
+        shootTop(){
+            if (this.game.ammo > 0){
+                this.projectiles.push(new Projectile(this.game, this.x + 80, this.y + 30));
+                this.game.ammo--;
             }
-        });
-    }
-
-    function resetGame() {
-        helicopter.y = 250;
-        helicopter.vy = 0;
-        obstacles = [];
-        score = 0;
-        frameCount = 0;
-        gameOver = false;
-        update(); // Restart the game loop
-    }
-
-    // --- Main Game Loop ---
-    function update() {
-        if (gameOver) {
-            drawGameOver();
-            return; // Stop the loop if game is over
         }
+    }
 
-        // Clear canvas
+    // --- ENEMY ---
+    // Defines the enemy characters.
+    class Enemy {
+        constructor(game){
+            this.game = game;
+            this.x = this.game.width;
+            this.speedX = Math.random() * -1.5 - 0.5;
+            this.markedForDeletion = false;
+            this.lives = 5;
+            this.score = this.lives;
+            this.image = document.getElementById('enemyImage');
+            this.frameX = 0;
+            this.frameY = 0;
+            this.maxFrame = 37;
+        }
+        update(){
+            this.x += this.speedX;
+            if (this.x + this.width < 0) this.markedForDeletion = true;
+            // sprite animation
+            if (this.frameX < this.maxFrame){
+                this.frameX++;
+            } else {
+                this.frameX = 0;
+            }
+        }
+        draw(context){
+            context.drawImage(this.image, this.frameX * this.width, this.frameY * this.height, this.width, this.height, this.x, this.y, this.width, this.height);
+            context.font = '20px Helvetica';
+            context.fillText(this.lives, this.x, this.y);
+        }
+    }
+    class Angler1 extends Enemy {
+        constructor(game){
+            super(game);
+            this.width = 228;
+            this.height = 169;
+            this.y = Math.random() * (this.game.height * 0.9 - this.height);
+        }
+    }
+
+    // --- LAYER ---
+    // Defines a single background layer for the parallax effect.
+    class Layer {
+        constructor(game, image, speedModifier){
+            this.game = game;
+            this.image = image;
+            this.speedModifier = speedModifier;
+            this.width = 1768;
+            this.height = 500;
+            this.x = 0;
+            this.y = 0;
+        }
+        update(){
+            if (this.x <= -this.width) this.x = 0;
+            this.x -= this.game.speed * this.speedModifier;
+        }
+        draw(context){
+            context.drawImage(this.image, this.x, this.y);
+            context.drawImage(this.image, this.x + this.width, this.y);
+        }
+    }
+
+    // --- BACKGROUND ---
+    // Manages all the background layers to create the parallax effect.
+    class Background {
+        constructor(game){
+            this.game = game;
+            // This is the single background image available in the HTML.
+            const backgroundImage = document.getElementById('backgroundImage');
+            
+            // We use the same image for all layers, but with different speed modifiers.
+            this.layer1 = new Layer(this.game, backgroundImage, 0.2);
+            this.layer2 = new Layer(this.game, backgroundImage, 0.4);
+            this.layer3 = new Layer(this.game, backgroundImage, 1);
+            this.layer4 = new Layer(this.game, backgroundImage, 1.5);
+
+            this.layers = [this.layer1, this.layer2, this.layer3, this.layer4];
+        }
+        update(){
+            this.layers.forEach(layer => layer.update());
+        }
+        draw(context){
+            this.layers.forEach(layer => layer.draw(context));
+        }
+    }
+
+    // --- UI ---
+    // Draws the user interface (score, ammo, etc.).
+    class UI {
+        constructor(game){
+            this.game = game;
+            this.fontSize = 25;
+            this.fontFamily = 'Helvetica';
+            this.color = 'white';
+        }
+        draw(context){
+            context.save();
+            context.fillStyle = this.color;
+            context.shadowOffsetX = 2;
+            context.shadowOffsetY = 2;
+            context.shadowColor = 'black';
+            context.font = this.fontSize + 'px ' + this.fontFamily;
+            // score
+            context.fillText('Score: ' + this.game.score, 20, 40);
+            // ammo
+            for (let i = 0; i < this.game.ammo; i++){
+                context.fillRect(20 + 5 * i, 50, 3, 20);
+            }
+            // game over messages
+            if (this.game.gameOver){
+                context.textAlign = 'center';
+                let message1;
+                let message2;
+                if (this.game.score > this.game.winningScore){
+                    message1 = 'You Win!';
+                    message2 = 'Well done!';
+                } else {
+                    message1 = 'You lose!';
+                    message2 = 'Try again next time!';
+                }
+                context.font = '50px ' + this.fontFamily;
+                context.fillText(message1, this.game.width * 0.5, this.game.height * 0.5 - 40);
+                context.font = '25px ' + this.fontFamily;
+                context.fillText(message2, this.game.width * 0.5, this.game.height * 0.5 + 40);
+            }
+            context.restore();
+        }
+    }
+
+    // --- GAME ---
+    // The main game class that ties everything together.
+    class Game {
+        constructor(width, height){
+            this.width = width;
+            this.height = height;
+            this.background = new Background(this);
+            this.player = new Player(this);
+            this.input = new InputHandler(this);
+            this.ui = new UI(this);
+            this.keys = [];
+            this.enemies = [];
+            this.enemyTimer = 0;
+            this.enemyInterval = 1000;
+            this.ammo = 20;
+            this.maxAmmo = 50;
+            this.ammoTimer = 0;
+            this.ammoInterval = 500;
+            this.gameOver = false;
+            this.score = 0;
+            this.winningScore = 10;
+            this.speed = 1;
+        }
+        update(deltaTime){
+            if (!this.gameOver) {
+                this.background.update();
+                this.player.update();
+                if (this.ammoTimer > this.ammoInterval){
+                    if (this.ammo < this.maxAmmo) this.ammo++;
+                    this.ammoTimer = 0;
+                } else {
+                    this.ammoTimer += deltaTime;
+                }
+                this.enemies.forEach(enemy => {
+                    enemy.update();
+                    if (this.checkCollision(this.player, enemy)){
+                        enemy.markedForDeletion = true;
+                    }
+                    this.player.projectiles.forEach(projectile => {
+                        if (this.checkCollision(projectile, enemy)){
+                            enemy.lives--;
+                            projectile.markedForDeletion = true;
+                            if (enemy.lives <= 0){
+                                enemy.markedForDeletion = true;
+                                this.score += enemy.score;
+                                if (this.score > this.winningScore) this.gameOver = true;
+                            }
+                        }
+                    })
+                });
+                this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion);
+                if (this.enemyTimer > this.enemyInterval && !this.gameOver){
+                    this.addEnemy();
+                    this.enemyTimer = 0;
+                } else {
+                    this.enemyTimer += deltaTime;
+                }
+            }
+        }
+        draw(context){
+            this.background.draw(context);
+            this.player.draw(context);
+            this.ui.draw(context);
+            this.enemies.forEach(enemy => {
+                enemy.draw(context);
+            });
+        }
+        addEnemy(){
+            this.enemies.push(new Angler1(this));
+        }
+        checkCollision(rect1, rect2){
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.height + rect1.y > rect2.y
+            )
+        }
+    }
+
+    const game = new Game(canvas.width, canvas.height);
+    let lastTime = 0;
+
+    // --- ANIMATION LOOP ---
+    // The main function that runs the game.
+    function animate(timeStamp){
+        const deltaTime = timeStamp - lastTime;
+        lastTime = timeStamp;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Update helicopter position
-        helicopter.vy += helicopter.gravity;
-        helicopter.y += helicopter.vy;
-
-        // Update obstacles
-        obstacles.forEach(obstacle => {
-            obstacle.x -= obstacle.speed;
-        });
-
-        // Remove off-screen obstacles
-        obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
-
-        // Generate new obstacles
-        generateObstacles();
-
-        // Check for collisions
-        checkCollision();
-
-        // Update score and frame count
-        score++;
-        frameCount++;
-
-        // Draw everything
-        drawHelicopter();
-        drawObstacles();
-        drawScore();
-
-        // Request next frame
-        requestAnimationFrame(update);
+        game.update(deltaTime);
+        game.draw(ctx);
+        requestAnimationFrame(animate);
     }
-
-    // --- Event Listeners ---
-    document.addEventListener('keydown', function(e) {
-        if (e.code === 'Space' || e.code === 'ArrowUp') {
-            if (!gameOver) {
-                helicopter.vy = helicopter.lift;
-            }
-        }
-        if (e.code === 'KeyR' && gameOver) {
-            resetGame();
-        }
-    });
-
-    // Initial call to start the game
-    update();
+    animate(0);
 });
 
