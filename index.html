@@ -3,707 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hoher Fläming Helicopter Explorer - Enhanced</title>
+    <title>Hoher Fläming Helicopter Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* --- Reset and Variables --- */
-        :root {
-            --bg-panel: rgba(20, 20, 30, 0.85);
-            --bg-panel-light: rgba(255, 255, 255, 0.95);
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0b0;
-            --text-dark: #333333;
-            --accent-primary: #00d4ff;
-            --accent-secondary: #ff6b6b;
-            --accent-success: #4ade80;
-            --accent-warning: #fbbf24;
-            --border-color: rgba(255, 255, 255, 0.2);
-            --shadow-color: rgba(0, 0, 0, 0.3);
-            --glow-color: #00d4ff;
-        }
-
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
         }
 
-        html, body {
-            height: 100%;
-            width: 100%;
+        body {
+            font-family: 'Arial', sans-serif;
             overflow: hidden;
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(to bottom, #1e3c72, #2a5298);
-            color: var(--text-primary);
-            position: relative;
-            user-select: none;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
         }
 
-        canvas {
-            display: block;
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
 
-        /* --- Loading Screen --- */
+        /* Loading Screen */
         #loading-screen {
             position: fixed;
-            inset: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            transition: opacity 0.5s ease-out, visibility 0.5s;
-        }
-        #loading-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
-        }
-        .loading-helicopter {
-            font-size: 80px;
-            animation: loading-hover 1.5s ease-in-out infinite;
-            margin-bottom: 30px;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
-        }
-        @keyframes loading-hover {
-            0%, 100% { 
-                transform: translateY(0) rotate(-5deg); 
-            }
-            50% { 
-                transform: translateY(-20px) rotate(5deg); 
-            }
-        }
-        .loading-text {
-            font-size: 24px;
-            color: white;
-            margin-bottom: 15px;
-            font-weight: 300;
-            letter-spacing: 2px;
-        }
-        .loading-details {
-            font-size: 14px;
-            color: rgba(255,255,255,0.7);
-            margin-bottom: 20px;
-            height: 20px;
-        }
-        .loading-bar {
-            width: 300px;
-            height: 6px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 3px;
-            overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .loading-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00d4ff, #00ff88);
-            width: 0%;
-            transition: width 0.5s;
-            box-shadow: 0 0 10px rgba(0,212,255,0.5);
+            transition: opacity 0.5s;
         }
 
-        /* --- HUD - 1960s Helicopter Instrument Panel (Subtler) --- */
-        #hud-container {
-            position: fixed;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%) scale(0.9);
-            z-index: 200;
+        #loading-screen.hidden {
+            opacity: 0;
             pointer-events: none;
-            animation: slideUp 0.8s ease-out;
-            transform-origin: bottom center;
         }
-        @keyframes slideUp {
-            from { transform: translateX(-50%) scale(0.9) translateY(100%); opacity: 0; }
-            to { transform: translateX(-50%) scale(0.9) translateY(0); opacity: 1; }
+
+        .loading-content {
+            text-align: center;
+            color: white;
         }
-        .instrument-panel {
-            background: linear-gradient(to bottom, #2a2a2a 0%, #1a1a1a 50%, #2a2a2a 100%);
-            border: 2px solid #333;
-            border-radius: 8px;
-            padding: 10px 15px;
-            box-shadow: 
-                inset 0 1px 3px rgba(0,0,0,0.7),
-                inset 0 -1px 3px rgba(0,0,0,0.7),
-                0 5px 20px rgba(0,0,0,0.5);
-            pointer-events: auto;
+
+        .helicopter-icon {
+            font-size: 80px;
+            animation: hover 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes hover {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .progress-bar {
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: white;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .hud-item {
+            margin: 5px 0;
             display: flex;
-            gap: 20px;
-            align-items: center;
-            position: relative;
+            justify-content: space-between;
         }
-        .instrument-panel::before {
-            content: '';
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            right: 5px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+
+        .hud-label {
+            color: #aaa;
         }
-        .instrument-panel::after {
-            content: 'BELL UH-1';
-            position: absolute;
-            top: -15px;
+
+        .hud-value {
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        /* Controls */
+        #controls {
+            position: fixed;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 8px;
-            color: #777;
-            letter-spacing: 1.5px;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
         }
-        
-        /* Analog Gauge Base */
-        .gauge {
-            width: 80px;
-            height: 80px;
-            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1a1a1a);
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            border: 2px solid #444;
-            box-shadow: 
-                inset 0 2px 6px rgba(0,0,0,0.8),
-                0 1px 3px rgba(0,0,0,0.5);
-            position: relative;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: 2px solid #0f0;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .gauge-face {
-            width: 85%;
-            height: 85%;
-            border-radius: 50%;
-            background: radial-gradient(circle, #f4f4f4, #d0d0d0);
-            position: relative;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+
+        .control-btn:hover {
+            background: rgba(0,255,0,0.2);
+            transform: scale(1.1);
         }
-        .gauge-label {
-            position: absolute;
-            bottom: 18%;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 8px;
-            font-weight: bold;
-            color: #222;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-family: 'Courier New', monospace;
+
+        .control-btn:active {
+            transform: scale(0.95);
         }
-        .gauge-value {
-            position: absolute;
-            top: 62%;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
-            font-weight: bold;
-            color: #222;
-            font-family: 'Courier New', monospace;
-        }
-        .gauge-marks {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-        .gauge-mark {
-            position: absolute;
-            top: 4px;
-            left: 50%;
-            width: 1px;
-            height: 6px;
-            background: #555;
-            transform-origin: bottom center;
-        }
-        .gauge-needle {
-            position: absolute;
-            width: 2px;
-            height: 28px;
-            background: linear-gradient(to bottom, #ff0000, #cc0000);
-            left: 50%;
-            top: 18%;
-            transform-origin: bottom center;
-            transform: translateX(-50%) rotate(0deg);
-            transition: transform 0.3s ease-out;
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            z-index: 10;
-        }
-        .gauge-needle::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #666, #333);
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
-        }
-        
-        /* Altimeter Specific */
-        .altimeter .gauge-needle {
-            background: linear-gradient(to bottom, #000, #333);
-        }
-        
-        /* Fuel Gauge Specific */
-        .fuel-gauge .gauge-face {
-            background: radial-gradient(circle, #f9f9f9, #e0e0e0);
-        }
-        .fuel-gauge.low-fuel .gauge-needle {
-            background: linear-gradient(to bottom, #ff0000, #cc0000);
-            animation: fuel-warning 0.5s infinite;
-        }
-        @keyframes fuel-warning {
-            50% { opacity: 0.3; }
-        }
-        .fuel-gauge .gauge-zones {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            overflow: hidden;
-        }
-        .fuel-red-zone {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: conic-gradient(
-                from 180deg,
-                transparent 0deg,
-                transparent 45deg,
-                rgba(255,0,0,0.2) 45deg,
-                rgba(255,0,0,0.2) 90deg,
-                transparent 90deg
-            );
-        }
-        
-        /* Compass */
-        .compass {
-            width: 90px;
-            height: 90px;
-            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1a1a1a);
-            border-radius: 50%;
-            border: 2px solid #444;
-            box-shadow: 
-                inset 0 3px 8px rgba(0,0,0,0.8),
-                0 2px 4px rgba(0,0,0,0.5);
-            position: relative;
-        }
-        .compass-face {
-            width: 90%;
-            height: 90%;
-            position: absolute;
-            top: 5%;
-            left: 5%;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
-        }
-        .compass-rose {
-            width: 80%;
-            height: 80%;
-            position: absolute;
-            top: 10%;
-            left: 10%;
-            border-radius: 50%;
-            background: radial-gradient(circle, #f0f0f0, #c0c0c0);
-            transform: rotate(0deg);
-            transition: transform 0.3s ease-out;
-        }
-        .compass-needle-main {
-            position: absolute;
-            width: 3px;
-            height: 40%;
-            background: linear-gradient(to bottom, #ff0000, #cc0000);
-            left: 50%;
-            top: 10%;
-            transform: translateX(-50%);
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        }
-        .compass-needle-main::after {
-            content: 'N';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ff0000;
-            font-weight: bold;
-            font-size: 10px;
-        }
-        .compass-direction {
-            position: absolute;
-            font-size: 10px;
-            font-weight: bold;
-            color: #333;
-            font-family: 'Courier New', monospace;
-        }
-        .compass-n { top: 6px; left: 50%; transform: translateX(-50%); }
-        .compass-s { bottom: 6px; left: 50%; transform: translateX(-50%); }
-        .compass-e { right: 6px; top: 50%; transform: translateY(-50%); }
-        .compass-w { left: 6px; top: 50%; transform: translateY(-50%); }
-        
-        /* Mission Status Display */
-        .mission-display {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 8px 12px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            min-width: 110px;
-        }
-        .mission-display-screen {
-            background: linear-gradient(to bottom, #0a0a0a, #1a1a1a);
-            border: 1px solid #222;
-            padding: 6px;
-            border-radius: 2px;
-            font-family: 'Courier New', monospace;
-            color: #0f0;
-            font-size: 10px;
-            text-shadow: 0 0 2px #0f0;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
-        }
-        .mission-label {
-            color: #777;
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-        }
-        .mission-value {
-            color: #0f0;
-            font-weight: bold;
-        }
-        
-        /* Warning Lights */
-        .warning-lights {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            padding: 0 8px;
-            border-left: 1px solid #333;
-        }
-        .warning-light {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #400, #200);
-            border: 2px solid #222;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-            position: relative;
-        }
-        .warning-light.active {
-            background: radial-gradient(circle at 30% 30%, #f00, #a00);
-            box-shadow: 
-                inset 0 1px 3px rgba(0,0,0,0.5),
-                0 0 8px rgba(255,0,0,0.5);
-            animation: warning-blink 1s infinite;
-        }
-        @keyframes warning-blink {
-            50% { opacity: 0.5; }
-        }
-        .warning-light::after {
-            content: attr(data-label);
-            position: absolute;
-            bottom: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 7px;
-            color: #555;
-            white-space: nowrap;
-        }
-        
-        /* --- Mini Map --- */
-        #mini-map {
+
+        /* Mini Map */
+        #minimap {
             position: fixed;
             top: 20px;
             right: 20px;
-            width: 180px;
-            height: 180px;
-            background: var(--bg-panel);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 10px;
-            box-shadow: 0 8px 32px var(--shadow-color);
-            z-index: 250;
-            animation: slideDown 0.5s ease-out;
-        }
-        #mini-map-canvas {
-            width: 100%;
-            height: 100%;
-            border-radius: 8px;
-            background: rgba(0,0,0,0.5);
-        }
-        
-        /* --- Controls & Buttons --- */
-        #controls-container {
-            position: fixed;
-            bottom: 30px;
-            left: 30px;
-            right: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            z-index: 300;
-            pointer-events: none;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            pointer-events: auto;
-        }
-        .action-button {
-            width: 70px; 
-            height: 70px;
-            background: var(--bg-panel);
-            backdrop-filter: blur(10px);
-            border: 2px solid var(--border-color);
-            border-radius: 50%;
-            font-size: 28px; 
-            font-weight: bold;
-            color: var(--accent-primary);
-            display: flex;
-            justify-content: center; 
-            align-items: center; 
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            position: relative;
-            overflow: hidden;
-        }
-        .action-button::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: radial-gradient(circle, var(--glow-color), transparent);
-            transition: width 0.3s, height 0.3s;
-            transform: translate(-50%, -50%);
-        }
-        .action-button:hover::before {
-            width: 100%;
-            height: 100%;
-        }
-        .action-button:hover {
-            transform: scale(1.1);
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 30px rgba(0,212,255,0.5);
-        }
-        .action-button:active { 
-            transform: scale(0.95); 
-        }
-        #land-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: #667eea;
-            display: none;
-            font-size: 16px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(102,126,234,0.5); }
-            50% { box-shadow: 0 0 40px rgba(102,126,234,0.8); }
-        }
-        #land-button.visible { display: flex; }
-        
-        #joystick-container {
             width: 150px;
             height: 150px;
-            position: relative;
-            pointer-events: auto;
-        }
-        #joystick-base {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-panel);
-            backdrop-filter: blur(10px);
-            border-radius: 50%;
-            border: 2px solid var(--border-color);
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
-        }
-        #joystick-handle {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            cursor: grab;
-            transition: box-shadow 0.3s;
-        }
-        #joystick-handle.active {
-            box-shadow: 0 0 30px rgba(0,212,255,0.8);
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            z-index: 100;
+            overflow: hidden;
         }
 
-        /* --- Menu --- */
-        #menu-container {
-            position: fixed; 
-            top: 0; 
-            right: -400px; 
-            width: 100%; 
-            max-width: 400px; 
+        #minimap-canvas {
+            width: 100%;
             height: 100%;
-            background: linear-gradient(to bottom, rgba(20,20,30,0.98), rgba(30,30,40,0.98));
-            backdrop-filter: blur(20px);
-            border-left: 1px solid var(--border-color);
-            z-index: 400; 
-            transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex; 
-            flex-direction: column;
-            box-shadow: -10px 0 40px rgba(0,0,0,0.5);
         }
-        #menu-container.open { right: 0; }
-        #menu-header { 
-            padding: 25px; 
-            border-bottom: 1px solid var(--border-color); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
-        }
-        #menu-title { 
-            font-size: 24px; 
-            font-weight: bold;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        #menu-close { 
-            background: none; 
-            border: none; 
-            font-size: 32px; 
-            color: var(--text-secondary); 
-            cursor: pointer; 
-            transition: all 0.3s; 
-        }
-        #menu-close:hover { 
-            color: var(--accent-primary); 
-            transform: rotate(90deg); 
-        }
-        #menu-content { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 20px;
-        }
-        #menu-content::-webkit-scrollbar {
-            width: 8px;
-        }
-        #menu-content::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-        }
-        #menu-content::-webkit-scrollbar-thumb {
-            background: var(--accent-primary);
-            border-radius: 4px;
-        }
-        #poi-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .poi-item {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .poi-item:hover {
-            background: rgba(0,212,255,0.1);
-            border-color: var(--accent-primary);
-            transform: translateX(5px);
-        }
-        .poi-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--text-primary);
-            margin-bottom: 5px;
-        }
-        .poi-distance {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        
-        /* --- Info Panel --- */
-        #info-panel {
+
+        /* Instructions */
+        #instructions {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            background: var(--bg-panel);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            max-width: 300px;
-            box-shadow: 0 8px 32px var(--shadow-color);
-            z-index: 250;
-            animation: slideDown 0.5s ease-out;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 100;
+            max-width: 250px;
         }
-        @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        #info-panel h2 {
-            font-size: 20px;
-            margin-bottom: 15px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        #info-panel p {
-            font-size: 14px;
-            line-height: 1.6;
-            color: var(--text-secondary);
+
+        #instructions h3 {
             margin-bottom: 10px;
+            color: #0f0;
         }
-        
-        /* --- Mobile Responsive --- */
+
+        #instructions p {
+            margin: 5px 0;
+        }
+
+        /* POI Marker */
+        .poi-marker {
+            position: fixed;
+            color: #ffff00;
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 90;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Mobile adjustments */
         @media (max-width: 768px) {
-            #hud-container {
-                transform: translateX(-50%) scale(0.7);
-                bottom: 5px;
-            }
-            #mini-map {
-                width: 120px;
-                height: 120px;
+            #hud {
                 top: 10px;
-                right: 10px;
+                left: 10px;
+                padding: 10px;
+                font-size: 12px;
+                min-width: 150px;
             }
-            #info-panel {
+            
+            #minimap {
+                width: 100px;
+                height: 100px;
+            }
+            
+            #instructions {
                 display: none;
             }
-            #controls-container {
-                bottom: 20px;
-                left: 20px;
-                right: 20px;
-            }
-            .action-button {
-                width: 60px;
-                height: 60px;
-                font-size: 24px;
-            }
-            #joystick-container {
-                width: 120px;
-                height: 120px;
-            }
-            #joystick-handle {
-                width: 60px;
-                height: 60px;
+            
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
             }
         }
     </style>
@@ -711,106 +230,380 @@
 <body>
     <!-- Loading Screen -->
     <div id="loading-screen">
-        <div class="loading-helicopter">🚁</div>
-        <div class="loading-text">Preparing Flight</div>
-        <div class="loading-details">Loading terrain...</div>
-        <div class="loading-bar">
-            <div class="loading-bar-fill"></div>
+        <div class="loading-content">
+            <div class="helicopter-icon">🚁</div>
+            <div class="loading-text">Preparing Flight...</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Main UI Elements will be dynamically created by JavaScript -->
-    
+    <!-- Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-item">
+            <span class="hud-label">Altitude:</span>
+            <span class="hud-value" id="altitude">100m</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">Speed:</span>
+            <span class="hud-value" id="speed">0 km/h</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">Fuel:</span>
+            <span class="hud-value" id="fuel">100%</span>
+        </div>
+        <div class="hud-item">
+            <span class="hud-label">Score:</span>
+            <span class="hud-value" id="score">0</span>
+        </div>
+    </div>
+
+    <!-- Mini Map -->
+    <div id="minimap">
+        <canvas id="minimap-canvas"></canvas>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+        <button class="control-btn" id="up-btn" title="Up">↑</button>
+        <button class="control-btn" id="down-btn" title="Down">↓</button>
+        <button class="control-btn" id="left-btn" title="Left">←</button>
+        <button class="control-btn" id="right-btn" title="Right">→</button>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions">
+        <h3>Controls</h3>
+        <p>🎮 Arrow Keys or Buttons to move</p>
+        <p>📍 Fly to yellow markers for points</p>
+        <p>⛽ Watch your fuel!</p>
+        <p>🏔️ Explore Hoher Fläming region</p>
+    </div>
+
     <script>
-        // Basic initialization - actual game logic would go here
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simulate loading
-            const loadingBar = document.querySelector('.loading-bar-fill');
-            const loadingDetails = document.querySelector('.loading-details');
-            const loadingScreen = document.getElementById('loading-screen');
-            
+        // Game variables
+        let scene, camera, renderer;
+        let helicopter, terrain;
+        let rotorMain, rotorTail;
+        let pois = [];
+        let gameState = {
+            altitude: 100,
+            speed: 0,
+            fuel: 100,
+            score: 0,
+            position: { x: 0, z: 0 },
+            velocity: { x: 0, z: 0 }
+        };
+
+        // Initialize loading
+        function startLoading() {
+            const progressBar = document.querySelector('.progress-fill');
             let progress = 0;
-            const loadingSteps = [
-                { progress: 20, text: 'Initializing helicopter...' },
-                { progress: 40, text: 'Loading POI data...' },
-                { progress: 60, text: 'Generating terrain...' },
-                { progress: 80, text: 'Preparing instruments...' },
-                { progress: 100, text: 'Ready for takeoff!' }
-            ];
             
-            let stepIndex = 0;
-            const loadingInterval = setInterval(() => {
-                if (stepIndex < loadingSteps.length) {
-                    const step = loadingSteps[stepIndex];
-                    loadingBar.style.width = step.progress + '%';
-                    loadingDetails.textContent = step.text;
-                    stepIndex++;
-                } else {
-                    clearInterval(loadingInterval);
+            const loadInterval = setInterval(() => {
+                progress += 20;
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(loadInterval);
                     setTimeout(() => {
-                        loadingScreen.classList.add('hidden');
-                        initializeGame();
+                        document.getElementById('loading-screen').classList.add('hidden');
+                        init();
+                        animate();
                     }, 500);
                 }
-            }, 600);
-        });
-        
-        function initializeGame() {
-            // Create main UI elements
-            createHUD();
-            createControls();
-            createMiniMap();
-            createMenu();
-            createInfoPanel();
-            
-            // Initialize Three.js scene
-            initThreeJS();
+            }, 300);
         }
-        
-        function createHUD() {
-            const hudContainer = document.createElement('div');
-            hudContainer.id = 'hud-container';
-            hudContainer.innerHTML = `
-                <div class="instrument-panel">
-                    <div class="gauge altimeter">
-                        <div class="gauge-face">
-                            <div class="gauge-marks"></div>
-                            <div class="gauge-needle"></div>
-                            <div class="gauge-label">ALT</div>
-                            <div class="gauge-value">0</div>
-                        </div>
-                    </div>
-                    <div class="gauge speed-gauge">
-                        <div class="gauge-face">
-                            <div class="gauge-marks"></div>
-                            <div class="gauge-needle"></div>
-                            <div class="gauge-label">KTS</div>
-                            <div class="gauge-value">0</div>
-                        </div>
-                    </div>
-                    <div class="compass">
-                        <div class="compass-face"></div>
-                        <div class="compass-rose">
-                            <div class="compass-needle-main"></div>
-                            <div class="compass-direction compass-n">N</div>
-                            <div class="compass-direction compass-s">S</div>
-                            <div class="compass-direction compass-e">E</div>
-                            <div class="compass-direction compass-w">W</div>
-                        </div>
-                    </div>
-                    <div class="gauge fuel-gauge">
-                        <div class="gauge-face">
-                            <div class="gauge-zones">
-                                <div class="fuel-red-zone"></div>
-                            </div>
-                            <div class="gauge-marks"></div>
-                            <div class="gauge-needle"></div>
-                            <div class="gauge-label">FUEL</div>
-                            <div class="gauge-value">100%</div>
-                        </div>
-                    </div>
-                    <div class="mission-display">
-                        <div class="mission-display-screen">
-                            <div class="mission-label">MISSION</div>
-                            <div class="mission-value">EXPLORE</div>
-                        </div>
+
+        // Initialize Three.js scene
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 100, 1000);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                2000
+            );
+            camera.position.set(0, 150, 200);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setClearColor(0x87CEEB);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(100, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -200;
+            directionalLight.shadow.camera.right = 200;
+            directionalLight.shadow.camera.top = 200;
+            directionalLight.shadow.camera.bottom = -200;
+            scene.add(directionalLight);
+
+            // Create terrain
+            createTerrain();
+
+            // Create helicopter
+            createHelicopter();
+
+            // Create POIs
+            createPOIs();
+
+            // Setup controls
+            setupControls();
+
+            // Setup minimap
+            setupMinimap();
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // Create terrain
+        function createTerrain() {
+            const geometry = new THREE.PlaneGeometry(1000, 1000, 50, 50);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0x3a7a3a,
+                wireframe: false
+            });
+
+            // Add height variation
+            const vertices = geometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const y = vertices[i + 1];
+                // Create hills
+                vertices[i + 2] = Math.sin(x * 0.01) * 20 + Math.cos(y * 0.01) * 20 + Math.random() * 5;
+            }
+            geometry.computeVertexNormals();
+
+            terrain = new THREE.Mesh(geometry, material);
+            terrain.rotation.x = -Math.PI / 2;
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+
+            // Add some trees (simple cones)
+            for (let i = 0; i < 100; i++) {
+                const treeGeometry = new THREE.ConeGeometry(5, 20, 6);
+                const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x0d5d0d });
+                const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                
+                tree.position.x = (Math.random() - 0.5) * 800;
+                tree.position.z = (Math.random() - 0.5) * 800;
+                tree.position.y = 10;
+                tree.castShadow = true;
+                
+                scene.add(tree);
+            }
+        }
+
+        // Create helicopter
+        function createHelicopter() {
+            helicopter = new THREE.Group();
+
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(8, 6, 20);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x2c3e50 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.castShadow = true;
+            helicopter.add(body);
+
+            // Cockpit
+            const cockpitGeometry = new THREE.SphereGeometry(5, 8, 6);
+            const cockpitMaterial = new THREE.MeshPhongMaterial({ color: 0x3498db });
+            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpit.position.z = 8;
+            cockpit.scale.z = 1.5;
+            helicopter.add(cockpit);
+
+            // Main rotor
+            const rotorGeometry = new THREE.BoxGeometry(80, 0.5, 3);
+            const rotorMaterial = new THREE.MeshPhongMaterial({ color: 0x34495e });
+            rotorMain = new THREE.Mesh(rotorGeometry, rotorMaterial);
+            rotorMain.position.y = 5;
+            helicopter.add(rotorMain);
+
+            // Tail
+            const tailGeometry = new THREE.BoxGeometry(3, 4, 25);
+            const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
+            tail.position.z = -20;
+            helicopter.add(tail);
+
+            // Tail rotor
+            const tailRotorGeometry = new THREE.BoxGeometry(12, 12, 0.5);
+            rotorTail = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
+            rotorTail.position.set(-2, 2, -32);
+            helicopter.add(rotorTail);
+
+            // Landing skids
+            const skidGeometry = new THREE.CylinderGeometry(0.5, 0.5, 30);
+            const skidMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
+            
+            const skid1 = new THREE.Mesh(skidGeometry, skidMaterial);
+            skid1.rotation.z = Math.PI / 2;
+            skid1.position.set(0, -5, 0);
+            skid1.position.x = -4;
+            helicopter.add(skid1);
+            
+            const skid2 = new THREE.Mesh(skidGeometry, skidMaterial);
+            skid2.rotation.z = Math.PI / 2;
+            skid2.position.set(0, -5, 0);
+            skid2.position.x = 4;
+            helicopter.add(skid2);
+
+            helicopter.position.y = gameState.altitude;
+            scene.add(helicopter);
+        }
+
+        // Create POIs
+        function createPOIs() {
+            const poiData = [
+                { name: "Bad Belzig Castle", x: 200, z: 150 },
+                { name: "Rabenstein Castle", x: -180, z: 200 },
+                { name: "Spring Park", x: -100, z: -150 },
+                { name: "Hagelberg Hill", x: 250, z: -100 },
+                { name: "Wiesenburg Castle", x: 0, z: 300 }
+            ];
+
+            poiData.forEach(poi => {
+                // Create 3D marker
+                const markerGeometry = new THREE.CylinderGeometry(0, 10, 30, 4);
+                const markerMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xffff00,
+                    emissive: 0xffff00,
+                    emissiveIntensity: 0.5
+                });
+                const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                marker.position.set(poi.x, 20, poi.z);
+                marker.castShadow = true;
+                marker.userData = { name: poi.name, collected: false };
+                
+                scene.add(marker);
+                pois.push(marker);
+            });
+        }
+
+        // Setup controls
+        function setupControls() {
+            const controls = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case 'ArrowUp': controls.up = true; break;
+                    case 'ArrowDown': controls.down = true; break;
+                    case 'ArrowLeft': controls.left = true; break;
+                    case 'ArrowRight': controls.right = true; break;
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                switch(e.key) {
+                    case 'ArrowUp': controls.up = false; break;
+                    case 'ArrowDown': controls.down = false; break;
+                    case 'ArrowLeft': controls.left = false; break;
+                    case 'ArrowRight': controls.right = false; break;
+                }
+            });
+
+            // Button controls
+            document.getElementById('up-btn').addEventListener('mousedown', () => controls.up = true);
+            document.getElementById('up-btn').addEventListener('mouseup', () => controls.up = false);
+            document.getElementById('up-btn').addEventListener('touchstart', () => controls.up = true);
+            document.getElementById('up-btn').addEventListener('touchend', () => controls.up = false);
+
+            document.getElementById('down-btn').addEventListener('mousedown', () => controls.down = true);
+            document.getElementById('down-btn').addEventListener('mouseup', () => controls.down = false);
+            document.getElementById('down-btn').addEventListener('touchstart', () => controls.down = true);
+            document.getElementById('down-btn').addEventListener('touchend', () => controls.down = false);
+
+            document.getElementById('left-btn').addEventListener('mousedown', () => controls.left = true);
+            document.getElementById('left-btn').addEventListener('mouseup', () => controls.left = false);
+            document.getElementById('left-btn').addEventListener('touchstart', () => controls.left = true);
+            document.getElementById('left-btn').addEventListener('touchend', () => controls.left = false);
+
+            document.getElementById('right-btn').addEventListener('mousedown', () => controls.right = true);
+            document.getElementById('right-btn').addEventListener('mouseup', () => controls.right = false);
+            document.getElementById('right-btn').addEventListener('touchstart', () => controls.right = true);
+            document.getElementById('right-btn').addEventListener('touchend', () => controls.right = false);
+
+            // Store controls globally
+            window.gameControls = controls;
+        }
+
+        // Setup minimap
+        function setupMinimap() {
+            const canvas = document.getElementById('minimap-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 150;
+            canvas.height = 150;
+
+            window.minimapCtx = ctx;
+        }
+
+        // Update minimap
+        function updateMinimap() {
+            const ctx = window.minimapCtx;
+            if (!ctx) return;
+
+            ctx.fillStyle = '#0a4a0a';
+            ctx.fillRect(0, 0, 150, 150);
+
+            // Draw POIs
+            ctx.fillStyle = '#ffff00';
+            pois.forEach(poi => {
+                if (!poi.userData.collected) {
+                    const x = (poi.position.x / 500) * 75 + 75;
+                    const z = (poi.position.z / 500) * 75 + 75;
+                    ctx.beginPath();
+                    ctx.arc(x, z, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Draw helicopter
+            ctx.fillStyle = '#00ff00';
+            const hx = (helicopter.position.x / 500) * 75 + 75;
+            const hz = (helicopter.position.z / 500) * 75 + 75;
+            ctx.beginPath();
+            ctx.arc(hx, hz, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw direction indicator
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(hx, hz);
+            ctx.lineTo(hx + Math.sin(helicopter.rotation.y) * 10, hz - Math.cos(helicopter.rotation.y) * 10);
+            ctx.stroke();
+        }
+
+        // Update game state
+        function updateGame() {
+            const controls = window.gameControls;
+            if (!controls) return;
+
+            // Update velocity based on controls
+            if (controls.up) {
+                gameState.velocity.z = Math.max(gameState.velocity.z - 0.5,
