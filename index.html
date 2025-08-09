@@ -109,9 +109,9 @@
         /* --- HUD - 1960s Helicopter Instrument Panel (Subtler) --- */
         #hud-container {
             position: fixed;
-            bottom: 10px; /* Lowered */
+            bottom: 10px;
             left: 50%;
-            transform: translateX(-50%) scale(0.9); /* Scaled down */
+            transform: translateX(-50%) scale(0.9);
             z-index: 200;
             pointer-events: none;
             animation: slideUp 0.8s ease-out;
@@ -123,13 +123,13 @@
         }
         .instrument-panel {
             background: linear-gradient(to bottom, #2a2a2a 0%, #1a1a1a 50%, #2a2a2a 100%);
-            border: 2px solid #333; /* Thinner border */
+            border: 2px solid #333;
             border-radius: 8px;
-            padding: 10px 15px; /* Reduced padding */
+            padding: 10px 15px;
             box-shadow: 
                 inset 0 1px 3px rgba(0,0,0,0.7),
                 inset 0 -1px 3px rgba(0,0,0,0.7),
-                0 5px 20px rgba(0,0,0,0.5); /* Softened shadow */
+                0 5px 20px rgba(0,0,0,0.5);
             pointer-events: auto;
             display: flex;
             gap: 20px;
@@ -142,7 +142,7 @@
             top: 5px;
             left: 5px;
             right: 5px;
-            height: 1px; /* Thinner line */
+            height: 1px;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
         }
         .instrument-panel::after {
@@ -151,7 +151,7 @@
             top: -15px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 8px; /* Smaller font */
+            font-size: 8px;
             color: #777;
             letter-spacing: 1.5px;
             font-weight: bold;
@@ -160,11 +160,11 @@
         
         /* Analog Gauge Base */
         .gauge {
-            width: 80px; /* Smaller */
-            height: 80px; /* Smaller */
+            width: 80px;
+            height: 80px;
             background: radial-gradient(circle at 30% 30%, #3a3a3a, #1a1a1a);
             border-radius: 50%;
-            border: 2px solid #444; /* Thinner border */
+            border: 2px solid #444;
             box-shadow: 
                 inset 0 2px 6px rgba(0,0,0,0.8),
                 0 1px 3px rgba(0,0,0,0.5);
@@ -609,5 +609,208 @@
             background: var(--accent-primary);
             border-radius: 4px;
         }
-        #poi-list { 
-  
+        #poi-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .poi-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .poi-item:hover {
+            background: rgba(0,212,255,0.1);
+            border-color: var(--accent-primary);
+            transform: translateX(5px);
+        }
+        .poi-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+        .poi-distance {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        /* --- Info Panel --- */
+        #info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 300px;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            z-index: 250;
+            animation: slideDown 0.5s ease-out;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        #info-panel h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #info-panel p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        
+        /* --- Mobile Responsive --- */
+        @media (max-width: 768px) {
+            #hud-container {
+                transform: translateX(-50%) scale(0.7);
+                bottom: 5px;
+            }
+            #mini-map {
+                width: 120px;
+                height: 120px;
+                top: 10px;
+                right: 10px;
+            }
+            #info-panel {
+                display: none;
+            }
+            #controls-container {
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+            }
+            .action-button {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+            #joystick-container {
+                width: 120px;
+                height: 120px;
+            }
+            #joystick-handle {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-helicopter">🚁</div>
+        <div class="loading-text">Preparing Flight</div>
+        <div class="loading-details">Loading terrain...</div>
+        <div class="loading-bar">
+            <div class="loading-bar-fill"></div>
+        </div>
+    </div>
+
+    <!-- Main UI Elements will be dynamically created by JavaScript -->
+    
+    <script>
+        // Basic initialization - actual game logic would go here
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate loading
+            const loadingBar = document.querySelector('.loading-bar-fill');
+            const loadingDetails = document.querySelector('.loading-details');
+            const loadingScreen = document.getElementById('loading-screen');
+            
+            let progress = 0;
+            const loadingSteps = [
+                { progress: 20, text: 'Initializing helicopter...' },
+                { progress: 40, text: 'Loading POI data...' },
+                { progress: 60, text: 'Generating terrain...' },
+                { progress: 80, text: 'Preparing instruments...' },
+                { progress: 100, text: 'Ready for takeoff!' }
+            ];
+            
+            let stepIndex = 0;
+            const loadingInterval = setInterval(() => {
+                if (stepIndex < loadingSteps.length) {
+                    const step = loadingSteps[stepIndex];
+                    loadingBar.style.width = step.progress + '%';
+                    loadingDetails.textContent = step.text;
+                    stepIndex++;
+                } else {
+                    clearInterval(loadingInterval);
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        initializeGame();
+                    }, 500);
+                }
+            }, 600);
+        });
+        
+        function initializeGame() {
+            // Create main UI elements
+            createHUD();
+            createControls();
+            createMiniMap();
+            createMenu();
+            createInfoPanel();
+            
+            // Initialize Three.js scene
+            initThreeJS();
+        }
+        
+        function createHUD() {
+            const hudContainer = document.createElement('div');
+            hudContainer.id = 'hud-container';
+            hudContainer.innerHTML = `
+                <div class="instrument-panel">
+                    <div class="gauge altimeter">
+                        <div class="gauge-face">
+                            <div class="gauge-marks"></div>
+                            <div class="gauge-needle"></div>
+                            <div class="gauge-label">ALT</div>
+                            <div class="gauge-value">0</div>
+                        </div>
+                    </div>
+                    <div class="gauge speed-gauge">
+                        <div class="gauge-face">
+                            <div class="gauge-marks"></div>
+                            <div class="gauge-needle"></div>
+                            <div class="gauge-label">KTS</div>
+                            <div class="gauge-value">0</div>
+                        </div>
+                    </div>
+                    <div class="compass">
+                        <div class="compass-face"></div>
+                        <div class="compass-rose">
+                            <div class="compass-needle-main"></div>
+                            <div class="compass-direction compass-n">N</div>
+                            <div class="compass-direction compass-s">S</div>
+                            <div class="compass-direction compass-e">E</div>
+                            <div class="compass-direction compass-w">W</div>
+                        </div>
+                    </div>
+                    <div class="gauge fuel-gauge">
+                        <div class="gauge-face">
+                            <div class="gauge-zones">
+                                <div class="fuel-red-zone"></div>
+                            </div>
+                            <div class="gauge-marks"></div>
+                            <div class="gauge-needle"></div>
+                            <div class="gauge-label">FUEL</div>
+                            <div class="gauge-value">100%</div>
+                        </div>
+                    </div>
+                    <div class="mission-display">
+                        <div class="mission-display-screen">
+                            <div class="mission-label">MISSION</div>
+                            <div class="mission-value">EXPLORE</div>
+                        </div>
