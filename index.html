@@ -606,4 +606,212 @@
 
             // Update velocity based on controls
             if (controls.up) {
-                gameState.velocity.z = Math.max(gameState.velocity.z - 0.5,
+                gameState.velocity.z = Math.max(gameState.velocity.z - 0.5, -5);
+            }
+            if (controls.down) {
+                gameState.velocity.z = Math.min(gameState.velocity.z + 0.5, 5);
+            }
+            if (controls.left) {
+                gameState.velocity.x = Math.max(gameState.velocity.x - 0.5, -5);
+                helicopter.rotation.z = Math.max(helicopter.rotation.z - 0.02, -0.2);
+            } else if (controls.right) {
+                gameState.velocity.x = Math.min(gameState.velocity.x + 0.5, 5);
+                helicopter.rotation.z = Math.min(helicopter.rotation.z + 0.02, 0.2);
+            } else {
+                helicopter.rotation.z *= 0.95;
+            }
+
+            // Apply friction
+            gameState.velocity.x *= 0.95;
+            gameState.velocity.z *= 0.95;
+
+            // Update position
+            helicopter.position.x += gameState.velocity.x;
+            helicopter.position.z += gameState.velocity.z;
+
+            // Keep helicopter in bounds
+            helicopter.position.x = Math.max(-400, Math.min(400, helicopter.position.x));
+            helicopter.position.z = Math.max(-400, Math.min(400, helicopter.position.z));
+
+            // Update camera to follow helicopter
+            camera.position.x = helicopter.position.x;
+            camera.position.y = helicopter.position.y + 100;
+            camera.position.z = helicopter.position.z + 150;
+            camera.lookAt(helicopter.position);
+
+            // Rotate rotors
+            if (rotorMain) rotorMain.rotation.y += 0.5;
+            if (rotorTail) rotorTail.rotation.z += 0.8;
+
+            // Check POI collection
+            pois.forEach(poi => {
+                if (!poi.userData.collected) {
+                    const distance = helicopter.position.distanceTo(poi.position);
+                    if (distance < 30 && Math.abs(helicopter.position.y - poi.position.y) < 50) {
+                        poi.userData.collected = true;
+                        poi.visible = false;
+                        gameState.score += 100;
+                        gameState.fuel = Math.min(100, gameState.fuel + 20);
+                        showScorePopup(100, poi.userData.name);
+                    }
+                }
+            });
+
+            // Update fuel
+            if (gameState.speed > 0.5) {
+                gameState.fuel = Math.max(0, gameState.fuel - 0.03);
+            }
+            
+            // Calculate speed
+            gameState.speed = Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10;
+
+            // Update HUD
+            document.getElementById('altitude').textContent = Math.round(helicopter.position.y) + 'm';
+            document.getElementById('speed').textContent = Math.round(gameState.speed) + ' km/h';
+            document.getElementById('fuel').textContent = Math.round(gameState.fuel) + '%';
+            document.getElementById('score').textContent = gameState.score;
+
+            // Change fuel color if low
+            const fuelElement = document.getElementById('fuel');
+            if (gameState.fuel < 30) {
+                fuelElement.style.color = '#ff0000';
+            } else if (gameState.fuel < 50) {
+                fuelElement.style.color = '#ffff00';
+            } else {
+                fuelElement.style.color = '#0f0';
+            }
+
+            // Update minimap
+            updateMinimap();
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updateGame();
+            
+            // Hover animation
+            const hoverOffset = Math.sin(Date.now() * 0.002) * 2;
+            
+            // Tilt based on movement
+            helicopter.rotation.x = -gameState.velocity.z * 0.05;
+            
+            // Rotate POI markers
+            pois.forEach(poi => {
+                if (!poi.userData.collected) {
+                    poi.rotation.y += 0.02;
+                    poi.position.y = 20 + Math.sin(Date.now() * 0.001 + poi.position.x) * 5;
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Update minimap canvas size on resize
+            const canvas = document.getElementById('minimap-canvas');
+            const container = document.getElementById('minimap');
+            if (canvas && container) {
+                const size = container.offsetWidth;
+                canvas.width = size;
+                canvas.height = size;
+            }
+        }
+
+        // Prevent default touch behaviors
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.closest('#joystick-zone') || e.target.closest('#action-buttons')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('#joystick-zone') || e.target.closest('#action-buttons')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Start the game
+        window.addEventListener('load', startLoading);
+
+        // Prevent zooming on mobile
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>(-400, Math.min(400, helicopter.position.z));
+
+            // Update camera to follow helicopter
+            camera.position.x = helicopter.position.x;
+            camera.position.z = helicopter.position.z + 200;
+            camera.lookAt(helicopter.position);
+
+            // Rotate rotors
+            if (rotorMain) rotorMain.rotation.y += 0.5;
+            if (rotorTail) rotorTail.rotation.z += 0.8;
+
+            // Check POI collection
+            pois.forEach(poi => {
+                if (!poi.userData.collected) {
+                    const distance = helicopter.position.distanceTo(poi.position);
+                    if (distance < 30) {
+                        poi.userData.collected = true;
+                        poi.visible = false;
+                        gameState.score += 100;
+                        gameState.fuel = Math.min(100, gameState.fuel + 20);
+                    }
+                }
+            });
+
+            // Update fuel
+            gameState.fuel = Math.max(0, gameState.fuel - 0.02);
+            gameState.speed = Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10;
+
+            // Update HUD
+            document.getElementById('altitude').textContent = Math.round(helicopter.position.y) + 'm';
+            document.getElementById('speed').textContent = Math.round(gameState.speed) + ' km/h';
+            document.getElementById('fuel').textContent = Math.round(gameState.fuel) + '%';
+            document.getElementById('score').textContent = gameState.score;
+
+            // Update minimap
+            updateMinimap();
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updateGame();
+            
+            // Hover animation
+            helicopter.position.y = gameState.altitude + Math.sin(Date.now() * 0.002) * 2;
+            
+            // Rotate POI markers
+            pois.forEach(poi => {
+                if (!poi.userData.collected) {
+                    poi.rotation.y += 0.02;
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Start the game
+        window.addEventListener('load', startLoading);
+    </script>
+</body>
+</html>
