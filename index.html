@@ -1,24 +1,28 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hoher Fläming Helicopter Explorer</title>
+    <title>Hoher Fläming Helicopter Explorer - Enhanced</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* --- Reset and Variables --- */
         :root {
-            --bg-panel: rgba(255, 255, 255, 0.9);
-            --text-primary: #333333;
-            --text-secondary: #666666;
-            --accent-primary: #007bff;
-            --accent-secondary: #dc3545;
-            --accent-success: #28a745;
-            --border-color: #dddddd;
-            --shadow-color: rgba(0, 0, 0, 0.15);
+            --bg-panel: rgba(20, 20, 30, 0.85);
+            --bg-panel-light: rgba(255, 255, 255, 0.95);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-dark: #333333;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #ff6b6b;
+            --accent-success: #4ade80;
+            --accent-warning: #fbbf24;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --glow-color: #00d4ff;
         }
 
         * {
@@ -33,7 +37,7 @@
             width: 100%;
             overflow: hidden;
             font-family: 'Roboto', sans-serif;
-            background: #87CEEB; /* Fallback sky color */
+            background: linear-gradient(to bottom, #1e3c72, #2a5298);
             color: var(--text-primary);
             position: relative;
             user-select: none;
@@ -47,13 +51,12 @@
         #loading-screen {
             position: fixed;
             inset: 0;
-            background: #f0f0f0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            color: var(--text-primary);
             transition: opacity 0.5s ease-out, visibility 0.5s;
         }
         #loading-screen.hidden {
@@ -61,65 +64,157 @@
             visibility: hidden;
         }
         .loading-helicopter {
-            font-size: 60px;
+            font-size: 80px;
             animation: loading-hover 1.5s ease-in-out infinite;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
         }
         @keyframes loading-hover {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            0%, 100% { 
+                transform: translateY(0) rotate(-5deg); 
+            }
+            50% { 
+                transform: translateY(-20px) rotate(5deg); 
+            }
         }
         .loading-text {
-            font-size: 18px;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 30px;
+            font-weight: 300;
+            letter-spacing: 2px;
         }
         .loading-bar {
-            width: 200px;
-            height: 5px;
-            background: #e0e0e0;
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
             border-radius: 3px;
             overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
         }
         .loading-bar-fill {
             height: 100%;
-            background: var(--accent-primary);
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
             width: 0%;
             transition: width 0.5s;
+            box-shadow: 0 0 10px rgba(0,212,255,0.5);
         }
 
         /* --- HUD --- */
         #hud-container {
             position: fixed;
-            top: 15px;
-            left: 15px;
-            right: 15px;
+            top: 20px;
+            left: 20px;
+            right: 20px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             z-index: 200;
             pointer-events: none;
-            gap: 15px;
+            gap: 20px;
         }
         .hud-panel {
             background: var(--bg-panel);
+            backdrop-filter: blur(10px);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 15px;
-            box-shadow: 0 3px 8px var(--shadow-color);
+            border-radius: 12px;
+            padding: 15px 20px;
+            box-shadow: 0 8px 32px var(--shadow-color);
             pointer-events: auto;
             flex-shrink: 0;
+            animation: slideDown 0.5s ease-out;
         }
-        .hud-row { display: flex; align-items: baseline; gap: 8px; margin: 4px 0; }
-        .hud-label { color: var(--text-secondary); font-size: 14px; }
-        .hud-value { font-weight: bold; font-size: 16px; color: var(--text-primary); }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .hud-row { 
+            display: flex; 
+            align-items: baseline; 
+            gap: 10px; 
+            margin: 8px 0; 
+        }
+        .hud-label { 
+            color: var(--text-secondary); 
+            font-size: 12px; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .hud-value { 
+            font-family: 'Orbitron', monospace;
+            font-weight: bold; 
+            font-size: 18px; 
+            color: var(--accent-primary);
+            text-shadow: 0 0 10px rgba(0,212,255,0.5);
+        }
+        .hud-value.low-fuel {
+            color: var(--accent-secondary);
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+        .hud-compass {
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--accent-primary);
+            border-radius: 50%;
+            position: relative;
+            margin-top: 10px;
+            box-shadow: 0 0 20px rgba(0,212,255,0.3);
+        }
+        .compass-needle {
+            position: absolute;
+            width: 2px;
+            height: 25px;
+            background: var(--accent-secondary);
+            left: 50%;
+            top: 5px;
+            transform-origin: bottom center;
+            transform: translateX(-50%);
+            transition: transform 0.3s ease;
+            box-shadow: 0 0 10px rgba(255,107,107,0.5);
+        }
+        .compass-label {
+            position: absolute;
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--text-secondary);
+        }
+        .compass-n { top: 2px; left: 50%; transform: translateX(-50%); }
+        .compass-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+        .compass-e { right: 2px; top: 50%; transform: translateY(-50%); }
+        .compass-w { left: 2px; top: 50%; transform: translateY(-50%); }
+        
+        /* --- Mini Map --- */
+        #mini-map {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 180px;
+            height: 180px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            z-index: 250;
+            animation: slideDown 0.5s ease-out;
+        }
+        #mini-map-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.5);
+        }
         
         /* --- Controls & Buttons --- */
         #controls-container {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
+            bottom: 30px;
+            left: 30px;
+            right: 30px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -128,40 +223,69 @@
         }
         .action-buttons {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             align-items: center;
             pointer-events: auto;
         }
         .action-button {
-            width: 60px; height: 60px;
-            background: white;
-            border: 1px solid var(--border-color);
+            width: 70px; 
+            height: 70px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border-color);
             border-radius: 50%;
-            font-size: 24px; 
+            font-size: 28px; 
             font-weight: bold;
-            color: var(--text-secondary);
+            color: var(--accent-primary);
             display: flex;
-            justify-content: center; align-items: center; cursor: pointer;
-            transition: all 0.2s ease;
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            position: relative;
+            overflow: hidden;
+        }
+        .action-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, var(--glow-color), transparent);
+            transition: width 0.3s, height 0.3s;
+            transform: translate(-50%, -50%);
+        }
+        .action-button:hover::before {
+            width: 100%;
+            height: 100%;
         }
         .action-button:hover {
-            background-color: #f8f9fa;
-            border-color: #c0c0c0;
-        }
-        .action-button:active { transform: scale(0.95); }
-        #land-button {
-            background-color: var(--accent-primary);
-            color: white;
+            transform: scale(1.1);
             border-color: var(--accent-primary);
-            display: none; /* Hidden by default */
-            font-size: 14px;
+            box-shadow: 0 0 30px rgba(0,212,255,0.5);
+        }
+        .action-button:active { 
+            transform: scale(0.95); 
+        }
+        #land-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            display: none;
+            font-size: 16px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(102,126,234,0.5); }
+            50% { box-shadow: 0 0 40px rgba(102,126,234,0.8); }
         }
         #land-button.visible { display: flex; }
-        #land-button:hover { background-color: #0069d9; }
         
         #joystick-container {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             position: relative;
             pointer-events: auto;
         }
@@ -169,126 +293,348 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.5);
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
             border-radius: 50%;
-            border: 2px solid rgba(0,0,0,0.1);
+            border: 2px solid var(--border-color);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
         }
         #joystick-handle {
             position: absolute;
-            width: 60px;
-            height: 60px;
-            background: white;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             border-radius: 50%;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             cursor: grab;
+            transition: box-shadow 0.3s;
+        }
+        #joystick-handle.active {
+            box-shadow: 0 0 30px rgba(0,212,255,0.8);
         }
 
         /* --- Menu --- */
         #menu-container {
-            position: fixed; top: 0; right: -350px; width: 100%; max-width: 350px; height: 100%;
-            background: #f8f9fa;
+            position: fixed; 
+            top: 0; 
+            right: -400px; 
+            width: 100%; 
+            max-width: 400px; 
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(20,20,30,0.98), rgba(30,30,40,0.98));
+            backdrop-filter: blur(20px);
             border-left: 1px solid var(--border-color);
-            z-index: 400; transition: right 0.3s ease;
-            display: flex; flex-direction: column;
-            box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+            z-index: 400; 
+            transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; 
+            flex-direction: column;
+            box-shadow: -10px 0 40px rgba(0,0,0,0.5);
         }
         #menu-container.open { right: 0; }
-        #menu-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        #menu-title { font-size: 20px; font-weight: bold; }
-        #menu-close { background: none; border: none; font-size: 28px; color: var(--text-secondary); cursor: pointer; transition: color 0.2s, transform 0.2s; }
-        #menu-close:hover { color: var(--text-primary); transform: rotate(90deg); }
-        #menu-content { flex: 1; overflow-y: auto; padding: 10px; }
-        #poi-list { display: flex; flex-direction: column; gap: 8px; }
+        #menu-header { 
+            padding: 25px; 
+            border-bottom: 1px solid var(--border-color); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+        }
+        #menu-title { 
+            font-size: 24px; 
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #menu-close { 
+            background: none; 
+            border: none; 
+            font-size: 32px; 
+            color: var(--text-secondary); 
+            cursor: pointer; 
+            transition: all 0.3s; 
+        }
+        #menu-close:hover { 
+            color: var(--accent-primary); 
+            transform: rotate(90deg); 
+        }
+        #menu-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px;
+        }
+        #menu-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        #menu-content::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        #menu-content::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+        #poi-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+        }
         .poi-item {
             border: 1px solid transparent;
-            background: white;
-            border-radius: 6px; padding: 12px;
-            cursor: pointer; transition: all 0.2s ease;
-            display: flex; align-items: center; gap: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px; 
+            padding: 15px;
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
         }
-        .poi-item:hover { border-color: var(--accent-primary); }
-        .poi-item.visited { background-color: #e8f5e9; }
-        .poi-item.visited .poi-item-name { text-decoration: line-through; color: var(--text-secondary); }
+        .poi-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,212,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .poi-item:hover::before {
+            left: 100%;
+        }
+        .poi-item:hover { 
+            border-color: var(--accent-primary);
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        .poi-item.visited { 
+            background: rgba(74,222,128,0.1);
+            border-color: var(--accent-success);
+        }
+        .poi-item.visited .poi-item-name { 
+            text-decoration: line-through; 
+            opacity: 0.7;
+        }
         .poi-item-id {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
             color: var(--accent-primary);
             flex-shrink: 0;
-            width: 24px;
+            width: 30px;
             text-align: center;
+            font-family: 'Orbitron', monospace;
         }
-        .poi-item.visited .poi-item-id { color: var(--accent-success); }
-        .poi-item-name { flex: 1; font-weight: normal; font-size: 15px; }
+        .poi-item.visited .poi-item-id { 
+            color: var(--accent-success); 
+        }
+        .poi-item-name { 
+            flex: 1; 
+            font-weight: normal; 
+            font-size: 16px; 
+        }
+        .poi-item-distance {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: 'Orbitron', monospace;
+        }
         .poi-item-status {
             color: var(--accent-success);
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
+        }
+        .poi-item.fuel-station::after {
+            content: '⛽';
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            font-size: 16px;
         }
 
         /* --- Modals --- */
         .modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 500; opacity: 0; visibility: hidden;
-            transition: all 0.3s ease; backdrop-filter: blur(4px);
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.7);
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            z-index: 500; 
+            opacity: 0; 
+            visibility: hidden;
+            transition: all 0.3s ease; 
+            backdrop-filter: blur(10px);
         }
-        .modal.active { opacity: 1; visibility: visible; }
+        .modal.active { 
+            opacity: 1; 
+            visibility: visible; 
+        }
         .modal-content {
-            background: white;
-            padding: 30px; border-radius: 12px; width: 90%; max-width: 550px;
-            box-shadow: 0 5px 20px var(--shadow-color);
-            transform: scale(0.9); transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(20,20,30,0.98), rgba(30,30,40,0.98));
+            padding: 35px; 
+            border-radius: 20px; 
+            width: 90%; 
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transform: scale(0.8) rotateX(10deg); 
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid var(--border-color);
         }
-        .modal.active .modal-content { transform: scale(1); }
-        .modal-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .modal.active .modal-content { 
+            transform: scale(1) rotateX(0); 
+        }
+        .modal-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
         .modal-icon {
-            width: 40px; height: 40px; background: var(--accent-primary);
-            border-radius: 50%; display: flex; justify-content: center; align-items: center;
-            font-size: 18px; font-weight: bold; color: white;
+            width: 50px; 
+            height: 50px; 
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 50%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            font-size: 24px; 
+            font-weight: bold; 
+            color: white;
             flex-shrink: 0;
+            box-shadow: 0 0 30px rgba(0,212,255,0.5);
         }
-        .modal.visited .modal-icon { background: var(--accent-success); }
-        .modal h2 { flex: 1; margin: 0; font-size: 22px; }
+        .modal.visited .modal-icon { 
+            background: linear-gradient(135deg, var(--accent-success), #22c55e); 
+        }
+        .modal h2 { 
+            flex: 1; 
+            margin: 0; 
+            font-size: 26px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
         .modal-description {
-            color: var(--text-secondary); line-height: 1.6; font-size: 16px;
-            margin-bottom: 25px; max-height: 200px; overflow-y: auto;
+            color: var(--text-secondary); 
+            line-height: 1.8; 
+            font-size: 16px;
+            margin-bottom: 30px; 
+            max-height: 250px; 
+            overflow-y: auto;
+            padding-right: 10px;
         }
-        .modal-buttons { display: flex; gap: 15px; justify-content: flex-end; }
+        .modal-description::-webkit-scrollbar {
+            width: 6px;
+        }
+        .modal-description::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+        .modal-buttons { 
+            display: flex; 
+            gap: 20px; 
+            justify-content: flex-end; 
+        }
         .modal-button {
-            background: var(--accent-primary); color: white;
-            border: none; padding: 10px 20px; border-radius: 6px;
-            font-size: 15px; font-weight: bold; cursor: pointer;
-            transition: all 0.2s ease;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border: none; 
+            padding: 12px 30px; 
+            border-radius: 25px;
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,212,255,0.3);
         }
-        .modal-button:hover { filter: brightness(1.1); }
+        .modal-button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(0,212,255,0.5);
+        }
 
-        /* --- Message Toast --- */
-        #message-toast {
+        /* --- Achievement Toast --- */
+        #achievement-toast {
             position: fixed;
-            bottom: -100px;
+            top: -200px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
+            background: linear-gradient(135deg, rgba(102,126,234,0.95), rgba(118,75,162,0.95));
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            box-shadow: 0 3px 8px var(--shadow-color);
+            padding: 20px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
             z-index: 600;
-            transition: all 0.5s ease;
-            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
             text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        #message-toast.show {
-            bottom: 150px;
+        #achievement-toast.show {
+            top: 100px;
+        }
+        .achievement-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            animation: bounceIn 0.5s;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .achievement-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .achievement-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* --- Weather Effects --- */
+        .weather-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        .weather-icon {
+            font-size: 20px;
         }
 
         /* --- Responsive --- */
         @media (max-width: 768px) {
-            #hud-container { flex-direction: column; align-items: stretch; }
-            #message-toast.show { bottom: 160px; width: 90%; }
+            #hud-container { 
+                flex-direction: column; 
+                align-items: stretch; 
+            }
+            #mini-map {
+                width: 140px;
+                height: 140px;
+            }
+            .action-button {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+            #joystick-container {
+                width: 120px;
+                height: 120px;
+            }
+            #achievement-toast.show { 
+                top: 80px; 
+                width: 90%; 
+            }
         }
     </style>
 </head>
@@ -311,13 +657,37 @@
                 <span class="hud-label">Speed:</span>
                 <span class="hud-value" id="speed">0km/h</span>
             </div>
+            <div class="hud-row">
+                <span class="hud-label">Fuel:</span>
+                <span class="hud-value" id="fuel">100%</span>
+            </div>
+            <div class="hud-compass">
+                <div class="compass-needle" id="compass-needle"></div>
+                <span class="compass-label compass-n">N</span>
+                <span class="compass-label compass-s">S</span>
+                <span class="compass-label compass-e">E</span>
+                <span class="compass-label compass-w">W</span>
+            </div>
         </div>
         <div class="hud-panel">
             <div class="hud-row">
                 <span class="hud-label">POIs Visited:</span>
                 <span class="hud-value" id="visited">0/16</span>
             </div>
+            <div class="hud-row">
+                <span class="hud-label">Flight Time:</span>
+                <span class="hud-value" id="flight-time">00:00</span>
+            </div>
+            <div class="weather-indicator">
+                <span class="weather-icon" id="weather-icon">☀️</span>
+                <span id="weather-text">Clear</span>
+            </div>
         </div>
+    </div>
+
+    <!-- Mini Map -->
+    <div id="mini-map" style="display: none;">
+        <canvas id="mini-map-canvas"></canvas>
     </div>
 
     <!-- Controls -->
@@ -354,45 +724,53 @@
             </div>
             <p id="info-description"></p>
             <div class="modal-buttons">
-                <button id="modal-close-button">Continue Flying</button>
+                <button id="modal-close-button" class="modal-button">Continue Flying</button>
             </div>
         </div>
     </div>
 
-    <!-- Message Toast -->
-    <div id="message-toast"></div>
+    <!-- Achievement Toast -->
+    <div id="achievement-toast">
+        <div class="achievement-icon" id="achievement-icon">🏆</div>
+        <div class="achievement-title" id="achievement-title">Achievement Unlocked!</div>
+        <div class="achievement-text" id="achievement-text">You discovered your first POI!</div>
+    </div>
 
     <script>
         // ============= CONFIGURATION =============
         const CONFIG = {
-            MOVEMENT_SPEED: 30,
-            TURN_SPEED: 1.5,
-            CLIMB_SPEED: 20,
-            CAMERA_DISTANCE: 30,
-            CAMERA_HEIGHT: 15,
-            LANDING_DISTANCE: 12,
-            LANDING_HEIGHT: 8,
-            MAP_SIZE: 500
+            MOVEMENT_SPEED: 35,
+            TURN_SPEED: 1.8,
+            CLIMB_SPEED: 22,
+            CAMERA_DISTANCE: 35,
+            CAMERA_HEIGHT: 18,
+            LANDING_DISTANCE: 15,
+            LANDING_HEIGHT: 10,
+            MAP_SIZE: 500,
+            FUEL_CONSUMPTION_RATE: 0.02,
+            FUEL_STATION_REFILL_RATE: 2,
+            PARTICLE_COUNT: 200,
+            CLOUD_COUNT: 15
         };
 
         // ============= POI DATA =============
         const POI_DATA = [
-            { id: 1, name: "Stadt und Burg Ziesar", x: -180, z: -190, visited: false, description: "Auf der Burg Ziesar befindet sich das Museum für brandenburgische Kirchen- und Kulturgeschichte des Mittelalters. Der sehr gut erhaltene Burgfried und die Schlosskapelle bieten einen weiten Blick über den Ziesarer Kiez." },
-            { id: 2, name: "Gutspark Dahlen", x: -80, z: -150, visited: false, description: "Der Gutspark Dahlen ist ein Waldstück seltener botanischer Kunst. Spaziergänge um den Schwanensee verzaubern die Besucher. Der Bauerngarten mit Kultur- und Duftpflanzen kann besucht werden." },
-            { id: 3, name: "Klein Briesener Bach", x: 20, z: -170, visited: false, description: "Der Artesische Brunnen im Naturschutzgebiet Klein Briesener Bach - hier steigt das Wasser nur durch den Erd-Eigendruck hervor und wird durch eine Rinne dem Briesenfließ zugeführt." },
-            { id: 4, name: "Paradies Dippmannsdorf", x: 140, z: -160, visited: false, description: "Aus einigen Dutzend Quellen sprudelt glasklares Wasser, das die Mühlenbäche speist. Der aus Buchen, Eichen und Birken bestehende Quellkopf wurde begehbar erschlossen." },
-            { id: 5, name: "Töpferort Görzke", x: -185, z: -80, visited: false, description: "Ein Besuch der kleinen Museen und des Handwerkerhofs, ein Bummel entlang der Bauernhöfe und Einkaufsmöglichkeiten in fünf Töpfereien erwarten die Besucher des Flämingdorfes." },
-            { id: 6, name: "Hagelberg", x: 15, z: -20, visited: false, description: "Der Hagelberg, ein echter 'Zweitausender' (200,3m), lädt zum Eintrag ins Gipfelbuch ein. Für den 'Aufstieg' zum Gipfelkreuz wird man mit einem schönen Blick über die Fläminglandschaft belohnt." },
-            { id: 7, name: "Bad Belzig mit Burg Eisenhardt", x: 145, z: -50, visited: false, description: "Auf der komplett erhaltenen Burg kann die 1000-jährige Geschichte der Stadt hautnah erkundet werden. Vom Butterturm bietet sich der schönste Ausblick auf Stadt und Urstromtal." },
-            { id: 8, name: "Aussichtspunkt Belziger Landschaftswiesen", x: 200, z: -70, visited: false, description: "Am Burgenwanderweg gelegen, bietet sich ein eindrucksvoller Blick in das Niederungsgebiet - eines der wichtigsten Vogelschutzgebiete Brandenburgs mit Großtrappen." },
-            { id: 9, name: "Wiesenburg mit Schloss und Park", x: -85, z: 20, visited: false, description: "Das Schloss erhebt sich majestätisch über dem Ort. Der als Landschaftspark gestaltete Schlosspark ist der bedeutendste seiner Art im Hohen Fläming und lädt zum ausgiebigen Spazieren ein." },
-            { id: 10, name: "Naturparkzentrum Hoher Fläming", x: 40, z: 150, visited: false, description: "Das Besucherinformationszentrum ist zentrale Anlaufstelle für alle Gäste. Hier erhält man die besten Tipps für Ausflüge, kann Fahrräder ausleihen und die Naturparkausstellung besuchen." },
-            { id: 11, name: "Raben mit Burg Rabenstein", x: 30, z: 140, visited: false, description: "Auf einem Hügel gelegen thront die südlichste der Flämingburgen, die Burg Rabenstein. Von hier führt ein Naturlehrpfad durch das Naturschutzgebiet Rabenstein hinunter ins Dorf." },
-            { id: 12, name: "Niemegk", x: 210, z: 70, visited: false, description: "Das Städtchen Niemegk mit seinem alten Rathaus prägt das Stadtbild. Vom Kirchturm bietet sich ein schöner Ausblick auf die Hauptkette des Flämings." },
-            { id: 13, name: "Flämingbuchen", x: -140, z: 90, visited: false, description: "In dem großen Waldgebiet der Brandenheide sind einige Inseln aus Buchen zu finden, wie in den Naturschutzgebieten 'Flämingbuchen' und 'Spring'." },
-            { id: 14, name: "Brautrummel mit Riesenstein", x: 25, z: 35, visited: false, description: "Die Sage erzählt, wie ein junges Brautpaar nach einem Gewitterregen in der Rummel ertrank. Heute kann man auf einer Rundwanderung zum Riesenstein die besondere Natur erleben." },
-            { id: 15, name: "Neuendorfer Rummel", x: 150, z: 140, visited: false, description: "Die Rummeln - verzweigte, enge Trockentäler - entstanden nach dem Abtauen der Gletscher. Wie grüne Finger stechen sie sich weit in die Agrarlandschaft hinein." },
-            { id: 16, name: "Garrey mit Aussichtsplattform", x: 180, z: 160, visited: false, description: "Die Landschaft rings um Garrey bietet fantastische Ausblicke. Eine Aussichtsplattform krönt das restaurierte alte Wasserwerk, in dem sich eine kleine Ausstellung befindet." }
+            { id: 1, name: "Stadt und Burg Ziesar", x: -180, z: -190, visited: false, description: "Auf der Burg Ziesar befindet sich das Museum für brandenburgische Kirchen- und Kulturgeschichte des Mittelalters. Der sehr gut erhaltene Burgfried und die Schlosskapelle bieten einen weiten Blick über den Ziesarer Kiez.", type: "castle" },
+            { id: 2, name: "Gutspark Dahlen", x: -80, z: -150, visited: false, description: "Der Gutspark Dahlen ist ein Waldstück seltener botanischer Kunst. Spaziergänge um den Schwanensee verzaubern die Besucher. Der Bauerngarten mit Kultur- und Duftpflanzen kann besucht werden.", type: "park" },
+            { id: 3, name: "Klein Briesener Bach", x: 20, z: -170, visited: false, description: "Der Artesische Brunnen im Naturschutzgebiet Klein Briesener Bach - hier steigt das Wasser nur durch den Erd-Eigendruck hervor und wird durch eine Rinne dem Briesenfließ zugeführt.", type: "nature" },
+            { id: 4, name: "Paradies Dippmannsdorf", x: 140, z: -160, visited: false, description: "Aus einigen Dutzend Quellen sprudelt glasklares Wasser, das die Mühlenbäche speist. Der aus Buchen, Eichen und Birken bestehende Quellkopf wurde begehbar erschlossen.", type: "nature" },
+            { id: 5, name: "Töpferort Görzke", x: -185, z: -80, visited: false, description: "Ein Besuch der kleinen Museen und des Handwerkerhofs, ein Bummel entlang der Bauernhöfe und Einkaufsmöglichkeiten in fünf Töpfereien erwarten die Besucher des Flämingdorfes.", type: "village" },
+            { id: 6, name: "Hagelberg", x: 15, z: -20, visited: false, description: "Der Hagelberg, ein echter 'Zweitausender' (200,3m), lädt zum Eintrag ins Gipfelbuch ein. Für den 'Aufstieg' zum Gipfelkreuz wird man mit einem schönen Blick über die Fläminglandschaft belohnt.", type: "mountain" },
+            { id: 7, name: "Bad Belzig mit Burg Eisenhardt", x: 145, z: -50, visited: false, description: "Auf der komplett erhaltenen Burg kann die 1000-jährige Geschichte der Stadt hautnah erkundet werden. Vom Butterturm bietet sich der schönste Ausblick auf Stadt und Urstromtal.", type: "castle", isFuelStation: true },
+            { id: 8, name: "Aussichtspunkt Belziger Landschaftswiesen", x: 200, z: -70, visited: false, description: "Am Burgenwanderweg gelegen, bietet sich ein eindrucksvoller Blick in das Niederungsgebiet - eines der wichtigsten Vogelschutzgebiete Brandenburgs mit Großtrappen.", type: "viewpoint" },
+            { id: 9, name: "Wiesenburg mit Schloss und Park", x: -85, z: 20, visited: false, description: "Das Schloss erhebt sich majestätisch über dem Ort. Der als Landschaftspark gestaltete Schlosspark ist der bedeutendste seiner Art im Hohen Fläming und lädt zum ausgiebigen Spazieren ein.", type: "castle" },
+            { id: 10, name: "Naturparkzentrum Hoher Fläming", x: 40, z: 150, visited: false, description: "Das Besucherinformationszentrum ist zentrale Anlaufstelle für alle Gäste. Hier erhält man die besten Tipps für Ausflüge, kann Fahrräder ausleihen und die Naturparkausstellung besuchen.", type: "center", isFuelStation: true },
+            { id: 11, name: "Raben mit Burg Rabenstein", x: 30, z: 140, visited: false, description: "Auf einem Hügel gelegen thront die südlichste der Flämingburgen, die Burg Rabenstein. Von hier führt ein Naturlehrpfad durch das Naturschutzgebiet Rabenstein hinunter ins Dorf.", type: "castle" },
+            { id: 12, name: "Niemegk", x: 210, z: 70, visited: false, description: "Das Städtchen Niemegk mit seinem alten Rathaus prägt das Stadtbild. Vom Kirchturm bietet sich ein schöner Ausblick auf die Hauptkette des Flämings.", type: "town" },
+            { id: 13, name: "Flämingbuchen", x: -140, z: 90, visited: false, description: "In dem großen Waldgebiet der Brandenheide sind einige Inseln aus Buchen zu finden, wie in den Naturschutzgebieten 'Flämingbuchen' und 'Spring'.", type: "nature" },
+            { id: 14, name: "Brautrummel mit Riesenstein", x: 25, z: 35, visited: false, description: "Die Sage erzählt, wie ein junges Brautpaar nach einem Gewitterregen in der Rummel ertrank. Heute kann man auf einer Rundwanderung zum Riesenstein die besondere Natur erleben.", type: "nature" },
+            { id: 15, name: "Neuendorfer Rummel", x: 150, z: 140, visited: false, description: "Die Rummeln - verzweigte, enge Trockentäler - entstanden nach dem Abtauen der Gletscher. Wie grüne Finger stechen sie sich weit in die Agrarlandschaft hinein.", type: "nature" },
+            { id: 16, name: "Garrey mit Aussichtsplattform", x: 180, z: 160, visited: false, description: "Die Landschaft rings um Garrey bietet fantastische Ausblicke. Eine Aussichtsplattform krönt das restaurierte alte Wasserwerk, in dem sich eine kleine Ausstellung befindet.", type: "viewpoint" }
         ];
 
         // ============= GAME STATE =============
@@ -406,9 +784,20 @@
             velocity: new THREE.Vector3(),
             altitude: 10,
             speed: 0,
+            fuel: 100,
             visitedCount: 0,
             nearPOI: null,
             gamePaused: false,
+            startTime: Date.now(),
+            achievements: {
+                firstPOI: false,
+                halfPOIs: false,
+                allPOIs: false,
+                highFlyer: false,
+                speedDemon: false
+            },
+            weather: 'clear',
+            windForce: new THREE.Vector3()
         };
 
         // ============= DOM ELEMENTS =============
@@ -419,7 +808,9 @@
             controls: document.getElementById('controls-container'),
             altitude: document.getElementById('altitude'),
             speed: document.getElementById('speed'),
+            fuel: document.getElementById('fuel'),
             visited: document.getElementById('visited'),
+            flightTime: document.getElementById('flight-time'),
             landButton: document.getElementById('land-button'),
             upButton: document.getElementById('up-button'),
             downButton: document.getElementById('down-button'),
@@ -431,9 +822,17 @@
             modalTitle: document.getElementById('info-title'),
             modalDescription: document.getElementById('info-description'),
             modalCloseButton: document.getElementById('modal-close-button'),
-            messageToast: document.getElementById('message-toast'),
+            achievementToast: document.getElementById('achievement-toast'),
+            achievementIcon: document.getElementById('achievement-icon'),
+            achievementTitle: document.getElementById('achievement-title'),
+            achievementText: document.getElementById('achievement-text'),
             joystick: document.getElementById('joystick-container'),
             joystickHandle: document.getElementById('joystick-handle'),
+            compassNeedle: document.getElementById('compass-needle'),
+            miniMap: document.getElementById('mini-map'),
+            miniMapCanvas: document.getElementById('mini-map-canvas'),
+            weatherIcon: document.getElementById('weather-icon'),
+            weatherText: document.getElementById('weather-text')
         };
 
         // ============= SCENE SETUP =============
@@ -471,7 +870,6 @@
         const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
         const textureLoader = new THREE.TextureLoader(loadingManager);
 
-
         // ============= SKYBOX =============
         const skyboxTexture = cubeTextureLoader.load([
             'https://threejs.org/examples/textures/cube/skyboxsun25deg/px.jpg',
@@ -506,6 +904,40 @@
                 scene.add(terrain);
             }
         );
+
+        // ============= CLOUDS =============
+        const cloudGroup = new THREE.Group();
+        const cloudMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.7 
+        });
+        
+        for (let i = 0; i < CONFIG.CLOUD_COUNT; i++) {
+            const cloud = new THREE.Group();
+            
+            for (let j = 0; j < 4; j++) {
+                const sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(Math.random() * 15 + 10, 8, 6),
+                    cloudMaterial
+                );
+                sphere.position.set(
+                    Math.random() * 30 - 15,
+                    Math.random() * 10,
+                    Math.random() * 30 - 15
+                );
+                cloud.add(sphere);
+            }
+            
+            cloud.position.set(
+                Math.random() * CONFIG.MAP_SIZE - CONFIG.MAP_SIZE/2,
+                Math.random() * 50 + 100,
+                Math.random() * CONFIG.MAP_SIZE - CONFIG.MAP_SIZE/2
+            );
+            cloud.userData = { speed: Math.random() * 0.5 + 0.1 };
+            cloudGroup.add(cloud);
+        }
+        scene.add(cloudGroup);
 
         // ============= HELICOPTER =============
         const helicopter = new THREE.Group();
@@ -548,7 +980,7 @@
 
         // ============= POI MARKERS =============
         const poiMeshes = [];
-        const unvisitedFlagMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
+        const unvisitedFlagMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide, emissive: 0xffc107, emissiveIntensity: 0 });
         const visitedFlagMaterial = new THREE.MeshStandardMaterial({ color: 0x28a745, side: THREE.DoubleSide });
 
         POI_DATA.forEach(poi => {
@@ -556,7 +988,7 @@
             
             const platform = new THREE.Mesh(
                 new THREE.CylinderGeometry(5, 5, 0.5, 16),
-                new THREE.MeshStandardMaterial({ color: 0xcccccc })
+                new THREE.MeshStandardMaterial({ color: poi.isFuelStation ? 0xff0000 : 0xcccccc })
             );
             platform.receiveShadow = true;
             group.add(platform);
@@ -579,6 +1011,44 @@
             poiMeshes.push(group);
         });
 
+        // ============= MINI MAP =============
+        const miniMapCtx = DOMElements.miniMapCanvas.getContext('2d');
+        const miniMapSize = 160;
+        DOMElements.miniMapCanvas.width = miniMapSize;
+        DOMElements.miniMapCanvas.height = miniMapSize;
+
+        function updateMiniMap() {
+            miniMapCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            miniMapCtx.fillRect(0, 0, miniMapSize, miniMapSize);
+            
+            // Draw POIs
+            POI_DATA.forEach(poi => {
+                const x = (poi.x / CONFIG.MAP_SIZE + 0.5) * miniMapSize;
+                const y = (poi.z / CONFIG.MAP_SIZE + 0.5) * miniMapSize;
+                
+                miniMapCtx.fillStyle = poi.visited ? '#4ade80' : (poi.isFuelStation ? '#ff6b6b' : '#ffc107');
+                miniMapCtx.beginPath();
+                miniMapCtx.arc(x, y, 3, 0, Math.PI * 2);
+                miniMapCtx.fill();
+            });
+            
+            // Draw helicopter
+            const hx = (helicopter.position.x / CONFIG.MAP_SIZE + 0.5) * miniMapSize;
+            const hy = (helicopter.position.z / CONFIG.MAP_SIZE + 0.5) * miniMapSize;
+            
+            miniMapCtx.save();
+            miniMapCtx.translate(hx, hy);
+            miniMapCtx.rotate(-helicopter.rotation.y - Math.PI/2);
+            miniMapCtx.fillStyle = '#00d4ff';
+            miniMapCtx.beginPath();
+            miniMapCtx.moveTo(0, -5);
+            miniMapCtx.lineTo(-3, 5);
+            miniMapCtx.lineTo(3, 5);
+            miniMapCtx.closePath();
+            miniMapCtx.fill();
+            miniMapCtx.restore();
+        }
+
         // ============= EVENT LISTENERS =============
         const setupEventListeners = () => {
             // Keyboard
@@ -588,16 +1058,6 @@
                 if (key === 'arrowup' || key === 'w') gameState.keys['forward'] = true;
                 if (key === 'arrowdown' || key === 's') gameState.keys['backward'] = true;
                 if (key === 'arrowleft' || key === 'a') gameState.keys['left'] = true;
-                if (key === 'arrowright' || key === 'd') gameState.keys['right'] = true;
-                if (key === ' ') { gameState.keys['up'] = true; e.preventDefault(); }
-                if (key === 'shift') gameState.keys['down'] = true;
-                if (key === 'l') handleLanding();
-            });
-            document.addEventListener('keyup', (e) => {
-                const key = e.key.toLowerCase();
-                if (key === 'arrowup' || key === 'w') gameState.keys['forward'] = false;
-                if (key === 'arrowdown' || key === 's') gameState.keys['backward'] = false;
-                if (key === 'arrowleft' || key === 'a') gameState.keys['left'] = false;
                 if (key === 'arrowright' || key === 'd') gameState.keys['right'] = false;
                 if (key === ' ') gameState.keys['up'] = false;
                 if (key === 'shift') gameState.keys['down'] = false;
@@ -606,10 +1066,11 @@
             // Touch - Joystick
             const joystick = DOMElements.joystick;
             const handle = DOMElements.joystickHandle;
-            const maxJoystickDist = joystick.offsetWidth / 2 - handle.offsetWidth / 2;
+            const maxJoystickDist = 75;
 
             joystick.addEventListener('touchstart', (e) => {
                 gameState.touch.joystick.active = true;
+                handle.classList.add('active');
                 updateJoystick(e.touches[0]);
                 e.preventDefault();
             });
@@ -623,13 +1084,14 @@
                 gameState.touch.joystick.active = false;
                 gameState.touch.joystick.x = 0;
                 gameState.touch.joystick.y = 0;
+                handle.classList.remove('active');
                 handle.style.transform = `translate(-50%, -50%)`;
             });
 
             function updateJoystick(touch) {
                 const rect = joystick.getBoundingClientRect();
-                let x = touch.clientX - rect.left - joystick.offsetWidth / 2;
-                let y = touch.clientY - rect.top - joystick.offsetHeight / 2;
+                let x = touch.clientX - rect.left - 75;
+                let y = touch.clientY - rect.top - 75;
                 const dist = Math.sqrt(x*x + y*y);
 
                 if (dist > maxJoystickDist) {
@@ -676,6 +1138,7 @@
             if (gameState.keys['up']) climbInput = 1;
             if (gameState.keys['down']) climbInput = -1;
 
+            // Apply movement
             let thrust = thrustInput * CONFIG.MOVEMENT_SPEED;
             let turn = turnInput * CONFIG.TURN_SPEED;
             let climb = climbInput * CONFIG.CLIMB_SPEED;
@@ -687,25 +1150,47 @@
             gameState.velocity.add(forward.multiplyScalar(-thrust * delta));
             
             gameState.velocity.y += climb * delta;
+            
+            // Add wind effect
+            gameState.velocity.add(gameState.windForce.clone().multiplyScalar(delta));
+            
             gameState.velocity.multiplyScalar(0.96); // Drag
             
             helicopter.position.add(gameState.velocity.clone().multiplyScalar(delta));
             
+            // Altitude limits
             if (helicopter.position.y < 1) { helicopter.position.y = 1; gameState.velocity.y = 0; }
             if (helicopter.position.y > 200) { helicopter.position.y = 200; gameState.velocity.y = 0; }
             
+            // Boundary limits
             const boundary = CONFIG.MAP_SIZE / 2;
             helicopter.position.x = Math.max(-boundary, Math.min(boundary, helicopter.position.x));
             helicopter.position.z = Math.max(-boundary, Math.min(boundary, helicopter.position.z));
             
+            // Update state
             gameState.altitude = helicopter.position.y;
             gameState.speed = Math.sqrt(gameState.velocity.x ** 2 + gameState.velocity.z ** 2) * 10;
             
+            // Consume fuel
+            if (gameState.speed > 0 || Math.abs(climbInput) > 0) {
+                gameState.fuel -= CONFIG.FUEL_CONSUMPTION_RATE * delta;
+                gameState.fuel = Math.max(0, gameState.fuel);
+                
+                if (gameState.fuel === 0) {
+                    gameState.velocity.y = Math.max(gameState.velocity.y - 10 * delta, -20);
+                }
+            }
+            
+            // Helicopter tilt effects
             helicopter.rotation.z = -turn * 0.3 - gameState.velocity.x * 0.01;
             helicopter.rotation.x = thrustInput * 0.2 - gameState.velocity.z * 0.01;
             
+            // Rotate rotors
             mainRotorGroup.rotation.y += delta * 30;
             tailRotorGroup.rotation.x += delta * 40;
+            
+            // Check achievements
+            checkAchievements();
         }
         
         function updateCamera() {
@@ -716,18 +1201,54 @@
             camera.lookAt(helicopter.position);
         }
         
+        function updateClouds(delta) {
+            cloudGroup.children.forEach(cloud => {
+                cloud.position.x += cloud.userData.speed * delta * 10;
+                if (cloud.position.x > CONFIG.MAP_SIZE/2) {
+                    cloud.position.x = -CONFIG.MAP_SIZE/2;
+                }
+            });
+        }
+        
+        function updateWeather() {
+            const time = Date.now() * 0.0001;
+            gameState.windForce.x = Math.sin(time) * 2;
+            gameState.windForce.z = Math.cos(time * 0.7) * 2;
+            
+            // Change weather randomly
+            if (Math.random() < 0.001) {
+                const weathers = [
+                    { name: 'Clear', icon: '☀️', wind: 1 },
+                    { name: 'Cloudy', icon: '☁️', wind: 1.5 },
+                    { name: 'Windy', icon: '💨', wind: 3 }
+                ];
+                const weather = weathers[Math.floor(Math.random() * weathers.length)];
+                gameState.weather = weather.name.toLowerCase();
+                DOMElements.weatherIcon.textContent = weather.icon;
+                DOMElements.weatherText.textContent = weather.name;
+                gameState.windForce.multiplyScalar(weather.wind);
+            }
+        }
+        
         function checkPOIs() {
             gameState.nearPOI = null;
             let closestDist = Infinity;
 
             poiMeshes.forEach(mesh => {
                 const poi = mesh.userData.poi;
-                if (poi.visited) {
-                    mesh.userData.flag.material.emissive.setHex(0x000000);
-                    return;
-                };
-
+                
                 const distance = helicopter.position.distanceTo(mesh.position);
+                
+                // Check for fuel station refill
+                if (poi.isFuelStation && distance < CONFIG.LANDING_DISTANCE && helicopter.position.y < CONFIG.LANDING_HEIGHT) {
+                    gameState.fuel = Math.min(100, gameState.fuel + CONFIG.FUEL_STATION_REFILL_RATE * 0.016);
+                }
+                
+                if (poi.visited) {
+                    mesh.userData.flag.material.emissiveIntensity = 0;
+                    return;
+                }
+
                 if (distance < CONFIG.LANDING_DISTANCE && helicopter.position.y < CONFIG.LANDING_HEIGHT) {
                     if (distance < closestDist) {
                         gameState.nearPOI = poi;
@@ -737,11 +1258,10 @@
                 
                 // Pulsing effect for nearby POIs
                 if (distance < CONFIG.LANDING_DISTANCE * 2) {
-                    const pulse = (Math.sin(Date.now() * 0.005) + 1) / 4; // 0 to 0.5
-                    mesh.userData.flag.material.emissive.setHex(0xffc107);
+                    const pulse = (Math.sin(Date.now() * 0.005) + 1) / 4;
                     mesh.userData.flag.material.emissiveIntensity = pulse;
                 } else {
-                    mesh.userData.flag.material.emissive.setHex(0x000000);
+                    mesh.userData.flag.material.emissiveIntensity = 0;
                 }
             });
             
@@ -762,26 +1282,67 @@
                 updatePOIList();
                 showInfoPanel(poi);
                 
-                if (gameState.visitedCount === POI_DATA.length) {
-                    setTimeout(() => showMessage("🎉 Mission Complete! All POIs discovered!"), 2000);
+                // Check achievements
+                if (gameState.visitedCount === 1 && !gameState.achievements.firstPOI) {
+                    gameState.achievements.firstPOI = true;
+                    showAchievement('🎯', 'First Discovery!', 'You found your first POI');
+                } else if (gameState.visitedCount === 8 && !gameState.achievements.halfPOIs) {
+                    gameState.achievements.halfPOIs = true;
+                    showAchievement('🌟', 'Halfway There!', 'You discovered half of all POIs');
+                } else if (gameState.visitedCount === POI_DATA.length && !gameState.achievements.allPOIs) {
+                    gameState.achievements.allPOIs = true;
+                    showAchievement('🏆', 'Master Explorer!', 'All POIs discovered!');
                 }
+            }
+        }
+        
+        function checkAchievements() {
+            if (gameState.altitude > 150 && !gameState.achievements.highFlyer) {
+                gameState.achievements.highFlyer = true;
+                showAchievement('🦅', 'High Flyer!', 'Reached 150m altitude');
+            }
+            if (gameState.speed > 80 && !gameState.achievements.speedDemon) {
+                gameState.achievements.speedDemon = true;
+                showAchievement('💨', 'Speed Demon!', 'Exceeded 80 km/h');
             }
         }
 
         function updateHUD() {
             DOMElements.altitude.textContent = `${Math.round(gameState.altitude)}m`;
             DOMElements.speed.textContent = `${Math.round(gameState.speed)}km/h`;
+            DOMElements.fuel.textContent = `${Math.round(gameState.fuel)}%`;
             DOMElements.visited.textContent = `${gameState.visitedCount}/${POI_DATA.length}`;
+            
+            // Update fuel warning
+            if (gameState.fuel < 20) {
+                DOMElements.fuel.classList.add('low-fuel');
+            } else {
+                DOMElements.fuel.classList.remove('low-fuel');
+            }
+            
+            // Update flight time
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            DOMElements.flightTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update compass
+            const angle = helicopter.rotation.y * (180 / Math.PI);
+            DOMElements.compassNeedle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
         }
         
         function updatePOIList() {
             DOMElements.poiList.innerHTML = '';
             POI_DATA.forEach(poi => {
                 const div = document.createElement('div');
-                div.className = 'poi-item' + (poi.visited ? ' visited' : '');
+                div.className = 'poi-item' + (poi.visited ? ' visited' : '') + (poi.isFuelStation ? ' fuel-station' : '');
+                
+                const distance = Math.round(helicopter.position.distanceTo(new THREE.Vector3(poi.x, 0, poi.z)));
+                
                 div.innerHTML = `
                     <div class="poi-item-id">${poi.id}</div>
                     <div class="poi-item-name">${poi.name}</div>
+                    <div class="poi-item-distance">${distance}m</div>
                     ${poi.visited ? '<div class="poi-item-status">✓</div>' : ''}
                 `;
                 div.onclick = () => {
@@ -795,16 +1356,17 @@
             });
         }
         
-        let messageTimeout;
-        function showMessage(text, duration = 3000) {
-            DOMElements.messageToast.textContent = text;
-            DOMElements.messageToast.classList.add('show');
-            clearTimeout(messageTimeout);
-            if (duration > 0) {
-                messageTimeout = setTimeout(() => {
-                    DOMElements.messageToast.classList.remove('show');
-                }, duration);
-            }
+        let achievementTimeout;
+        function showAchievement(icon, title, text) {
+            DOMElements.achievementIcon.textContent = icon;
+            DOMElements.achievementTitle.textContent = title;
+            DOMElements.achievementText.textContent = text;
+            DOMElements.achievementToast.classList.add('show');
+            
+            clearTimeout(achievementTimeout);
+            achievementTimeout = setTimeout(() => {
+                DOMElements.achievementToast.classList.remove('show');
+            }, 4000);
         }
         
         function showInfoPanel(poi) {
@@ -830,10 +1392,13 @@
             
             if (!gameState.gamePaused) {
                 updateHelicopter(delta);
+                updateClouds(delta);
+                updateWeather();
                 checkPOIs();
             }
             updateCamera();
             updateHUD();
+            updateMiniMap();
             
             renderer.render(scene, camera);
         }
@@ -843,11 +1408,12 @@
             DOMElements.loadingScreen.classList.add('hidden');
             DOMElements.hud.style.display = 'flex';
             DOMElements.controls.style.display = 'flex';
+            DOMElements.miniMap.style.display = 'block';
             
             updatePOIList();
             setupEventListeners();
             
-            showMessage('Welcome to Hoher Fläming! Use controls to fly.', 5000);
+            showAchievement('🚁', 'Welcome!', 'Explore Hoher Fläming from above');
             
             animate();
         }
@@ -857,9 +1423,18 @@
             DOMElements.loadingBarFill.style.width = `${progress * 100}%`;
         };
         loadingManager.onLoad = () => {
-             // A small delay to ensure assets are fully ready and avoid stutter
             setTimeout(init, 500);
         };
     </script>
 </body>
-</html>
+</html>'] = true;
+                if (key === ' ') { gameState.keys['up'] = true; e.preventDefault(); }
+                if (key === 'shift') gameState.keys['down'] = true;
+                if (key === 'l') handleLanding();
+            });
+            document.addEventListener('keyup', (e) => {
+                const key = e.key.toLowerCase();
+                if (key === 'arrowup' || key === 'w') gameState.keys['forward'] = false;
+                if (key === 'arrowdown' || key === 's') gameState.keys['backward'] = false;
+                if (key === 'arrowleft' || key === 'a') gameState.keys['left'] = false;
+                if (key === 'arrowright' || key === 'd') gameState.keys['right']
