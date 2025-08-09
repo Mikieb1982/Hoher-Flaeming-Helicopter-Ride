@@ -1,40 +1,4 @@
-index.html
-directionalLight.shadow.mapSize.height = 2048;
-            scene.add(directionalLight);
-
-            // --- Helicopter Model ---
-            helicopter = new THREE.Group();
-            // Body
-            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.4 });
-            const bodyGeometry = new THREE.BoxGeometry(5, 2, 2);
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.castShadow = true;
-            helicopter.add(body);
-            // Cockpit
-            const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0x6a8191, transparent: true, opacity: 0.6 });
-            const cockpitGeometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-            cockpit.position.set(2.5, 0.2, 0);
-            helicopter.add(cockpit);
-            // Tail
-            const tailGeometry = new THREE.BoxGeometry(4, 0.5, 0.5);
-            const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-            tail.position.set(-4, 0.5, 0);
-            helicopter.add(tail);
-            // Rotor
-            const rotorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-            const rotorGeometry = new THREE.BoxGeometry(0.2, 8, 0.2);
-            const rotor = new THREE.Mesh(rotorGeometry, rotorMaterial);
-            rotor.position.y = 1.5;
-            helicopter.add(rotor);
-            
-            helicopter.position.set(0, 150, 0); // Start higher up
-            scene.add(helicopter);
-
-            // --- Ground Plane with Hills and Curve ---
-            createCurvedHillyTerrain();
-
-            // --- Event Listeners ---
+085dc9c62c1d6d14dfc92af2f407abcdf48748fb            // --- Event Listeners ---
             window.addEventListener('resize', onWindowResize, false);
             document.addEventListener('keydown', (event) => keys[event.key.toLowerCase()] = true);
             document.addEventListener('keyup', (event) => keys[event.key.toLowerCase()] = false);
