@@ -100,91 +100,316 @@
             box-shadow: 0 0 10px rgba(0,212,255,0.5);
         }
 
-        /* --- HUD --- */
+        /* --- HUD - 1960s Helicopter Instrument Panel --- */
         #hud-container {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 200;
             pointer-events: none;
-            gap: 20px;
+            animation: slideUp 0.8s ease-out;
         }
-        .hud-panel {
-            background: var(--bg-panel);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(100%); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        .instrument-panel {
+            background: linear-gradient(to bottom, #2a2a2a 0%, #1a1a1a 50%, #2a2a2a 100%);
+            border: 4px solid #444;
+            border-radius: 8px;
             padding: 15px 20px;
-            box-shadow: 0 8px 32px var(--shadow-color);
+            box-shadow: 
+                inset 0 2px 5px rgba(0,0,0,0.8),
+                inset 0 -2px 5px rgba(0,0,0,0.8),
+                0 10px 30px rgba(0,0,0,0.7);
             pointer-events: auto;
-            flex-shrink: 0;
-            animation: slideDown 0.5s ease-out;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            position: relative;
         }
-        @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .instrument-panel::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         }
-        .hud-row { 
-            display: flex; 
-            align-items: baseline; 
-            gap: 10px; 
-            margin: 8px 0; 
+        .instrument-panel::after {
+            content: 'BELL UH-1';
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #888;
+            letter-spacing: 2px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
         }
-        .hud-label { 
-            color: var(--text-secondary); 
-            font-size: 12px; 
+        
+        /* Analog Gauge Base */
+        .gauge {
+            width: 90px;
+            height: 90px;
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1a1a1a);
+            border-radius: 50%;
+            border: 3px solid #555;
+            box-shadow: 
+                inset 0 3px 8px rgba(0,0,0,0.8),
+                0 2px 4px rgba(0,0,0,0.5);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gauge-face {
+            width: 85%;
+            height: 85%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #f4f4f4, #d0d0d0);
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .gauge-label {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: bold;
+            color: #222;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-family: 'Courier New', monospace;
+        }
+        .gauge-value {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-weight: bold;
+            color: #222;
+            font-family: 'Courier New', monospace;
+        }
+        .gauge-marks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .gauge-mark {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            width: 2px;
+            height: 8px;
+            background: #444;
+            transform-origin: bottom center;
+        }
+        .gauge-needle {
+            position: absolute;
+            width: 3px;
+            height: 35px;
+            background: linear-gradient(to bottom, #ff0000, #cc0000);
+            left: 50%;
+            top: 15%;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.3s ease-out;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .gauge-needle::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #666, #333);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        /* Altimeter Specific */
+        .altimeter .gauge-needle {
+            background: linear-gradient(to bottom, #000, #333);
+        }
+        
+        /* Fuel Gauge Specific */
+        .fuel-gauge .gauge-face {
+            background: radial-gradient(circle, #f9f9f9, #e0e0e0);
+        }
+        .fuel-gauge.low-fuel .gauge-needle {
+            background: linear-gradient(to bottom, #ff0000, #cc0000);
+            animation: fuel-warning 0.5s infinite;
+        }
+        @keyframes fuel-warning {
+            50% { opacity: 0.3; }
+        }
+        .fuel-gauge .gauge-zones {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        .fuel-red-zone {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(
+                from 180deg,
+                transparent 0deg,
+                transparent 45deg,
+                rgba(255,0,0,0.2) 45deg,
+                rgba(255,0,0,0.2) 90deg,
+                transparent 90deg
+            );
+        }
+        
+        /* Compass */
+        .compass {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1a1a1a);
+            border-radius: 50%;
+            border: 3px solid #555;
+            box-shadow: 
+                inset 0 3px 8px rgba(0,0,0,0.8),
+                0 2px 4px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .compass-face {
+            width: 90%;
+            height: 90%;
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .compass-rose {
+            width: 80%;
+            height: 80%;
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #f0f0f0, #c0c0c0);
+            transform: rotate(0deg);
+            transition: transform 0.3s ease-out;
+        }
+        .compass-needle-main {
+            position: absolute;
+            width: 4px;
+            height: 40%;
+            background: linear-gradient(to bottom, #ff0000, #cc0000);
+            left: 50%;
+            top: 10%;
+            transform: translateX(-50%);
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .compass-needle-main::after {
+            content: 'N';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff0000;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .compass-direction {
+            position: absolute;
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            font-family: 'Courier New', monospace;
+        }
+        .compass-n { top: 8px; left: 50%; transform: translateX(-50%); }
+        .compass-s { bottom: 8px; left: 50%; transform: translateX(-50%); }
+        .compass-e { right: 8px; top: 50%; transform: translateY(-50%); }
+        .compass-w { left: 8px; top: 50%; transform: translateY(-50%); }
+        
+        /* Mission Status Display */
+        .mission-display {
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 4px;
+            padding: 10px 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 120px;
+        }
+        .mission-display-screen {
+            background: linear-gradient(to bottom, #0a0a0a, #1a1a1a);
+            border: 1px solid #333;
+            padding: 8px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            font-size: 11px;
+            text-shadow: 0 0 3px #0f0;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .mission-label {
+            color: #888;
+            font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            margin-bottom: 2px;
         }
-        .hud-value { 
-            font-family: 'Orbitron', monospace;
-            font-weight: bold; 
-            font-size: 18px; 
-            color: var(--accent-primary);
-            text-shadow: 0 0 10px rgba(0,212,255,0.5);
+        .mission-value {
+            color: #0f0;
+            font-weight: bold;
         }
-        .hud-value.low-fuel {
-            color: var(--accent-secondary);
-            animation: blink 1s infinite;
+        
+        /* Warning Lights */
+        .warning-lights {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 0 10px;
+            border-left: 2px solid #444;
         }
-        @keyframes blink {
+        .warning-light {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #400, #200);
+            border: 2px solid #333;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .warning-light.active {
+            background: radial-gradient(circle at 30% 30%, #f00, #a00);
+            box-shadow: 
+                inset 0 2px 4px rgba(0,0,0,0.5),
+                0 0 10px rgba(255,0,0,0.5);
+            animation: warning-blink 1s infinite;
+        }
+        @keyframes warning-blink {
             50% { opacity: 0.5; }
         }
-        .hud-compass {
-            width: 60px;
-            height: 60px;
-            border: 2px solid var(--accent-primary);
-            border-radius: 50%;
-            position: relative;
-            margin-top: 10px;
-            box-shadow: 0 0 20px rgba(0,212,255,0.3);
-        }
-        .compass-needle {
+        .warning-light::after {
+            content: attr(data-label);
             position: absolute;
-            width: 2px;
-            height: 25px;
-            background: var(--accent-secondary);
+            bottom: -15px;
             left: 50%;
-            top: 5px;
-            transform-origin: bottom center;
             transform: translateX(-50%);
-            transition: transform 0.3s ease;
-            box-shadow: 0 0 10px rgba(255,107,107,0.5);
+            font-size: 8px;
+            color: #666;
+            white-space: nowrap;
         }
-        .compass-label {
-            position: absolute;
-            font-size: 10px;
-            font-weight: bold;
-            color: var(--text-secondary);
-        }
-        .compass-n { top: 2px; left: 50%; transform: translateX(-50%); }
-        .compass-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
-        .compass-e { right: 2px; top: 50%; transform: translateY(-50%); }
-        .compass-w { left: 2px; top: 50%; transform: translateY(-50%); }
         
         /* --- Mini Map --- */
         #mini-map {
@@ -646,41 +871,94 @@
         <div class="loading-bar"><div id="loading-bar-fill" class="loading-bar-fill"></div></div>
     </div>
 
-    <!-- HUD -->
+    <!-- HUD - 1960s Helicopter Instrument Panel -->
     <div id="hud-container" style="display: none;">
-        <div class="hud-panel">
-            <div class="hud-row">
-                <span class="hud-label">Altitude:</span>
-                <span class="hud-value" id="altitude">0m</span>
+        <div class="instrument-panel">
+            <!-- Altimeter -->
+            <div class="gauge altimeter">
+                <div class="gauge-face">
+                    <div class="gauge-marks">
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(0deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(45deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(90deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(135deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(180deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(225deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(270deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(315deg);"></div>
+                    </div>
+                    <div class="gauge-needle" id="altitude-needle"></div>
+                    <div class="gauge-label">ALT</div>
+                    <div class="gauge-value" id="altitude">0m</div>
+                </div>
             </div>
-            <div class="hud-row">
-                <span class="hud-label">Speed:</span>
-                <span class="hud-value" id="speed">0km/h</span>
+            
+            <!-- Speed Indicator -->
+            <div class="gauge speed-indicator">
+                <div class="gauge-face">
+                    <div class="gauge-marks">
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(0deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(45deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(90deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(135deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(180deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(225deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(270deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(315deg);"></div>
+                    </div>
+                    <div class="gauge-needle" id="speed-needle"></div>
+                    <div class="gauge-label">SPEED</div>
+                    <div class="gauge-value" id="speed">0km/h</div>
+                </div>
             </div>
-            <div class="hud-row">
-                <span class="hud-label">Fuel:</span>
-                <span class="hud-value" id="fuel">100%</span>
+            
+            <!-- Compass -->
+            <div class="compass">
+                <div class="compass-face"></div>
+                <div class="compass-rose" id="compass-rose">
+                    <div class="compass-needle-main"></div>
+                    <span class="compass-direction compass-n">N</span>
+                    <span class="compass-direction compass-s">S</span>
+                    <span class="compass-direction compass-e">E</span>
+                    <span class="compass-direction compass-w">W</span>
+                </div>
             </div>
-            <div class="hud-compass">
-                <div class="compass-needle" id="compass-needle"></div>
-                <span class="compass-label compass-n">N</span>
-                <span class="compass-label compass-s">S</span>
-                <span class="compass-label compass-e">E</span>
-                <span class="compass-label compass-w">W</span>
+            
+            <!-- Fuel Gauge -->
+            <div class="gauge fuel-gauge" id="fuel-gauge">
+                <div class="gauge-face">
+                    <div class="gauge-zones">
+                        <div class="fuel-red-zone"></div>
+                    </div>
+                    <div class="gauge-marks">
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(0deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(45deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(90deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(135deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(180deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(225deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(270deg);"></div>
+                        <div class="gauge-mark" style="transform: translateX(-50%) rotate(315deg);"></div>
+                    </div>
+                    <div class="gauge-needle" id="fuel-needle"></div>
+                    <div class="gauge-label">FUEL</div>
+                    <div class="gauge-value" id="fuel">100%</div>
+                </div>
             </div>
-        </div>
-        <div class="hud-panel">
-            <div class="hud-row">
-                <span class="hud-label">POIs Visited:</span>
-                <span class="hud-value" id="visited">0/16</span>
+            
+            <!-- Mission Display -->
+            <div class="mission-display">
+                <div class="mission-display-screen">
+                    <div class="mission-label">MISSION STATUS</div>
+                    <div>POI: <span class="mission-value" id="visited">0/16</span></div>
+                    <div>TIME: <span class="mission-value" id="flight-time">00:00</span></div>
+                </div>
             </div>
-            <div class="hud-row">
-                <span class="hud-label">Flight Time:</span>
-                <span class="hud-value" id="flight-time">00:00</span>
-            </div>
-            <div class="weather-indicator">
-                <span class="weather-icon" id="weather-icon">☀️</span>
-                <span id="weather-text">Clear</span>
+            
+            <!-- Warning Lights -->
+            <div class="warning-lights">
+                <div class="warning-light" id="low-fuel-light" data-label="FUEL"></div>
+                <div class="warning-light" id="landing-light" data-label="LAND"></div>
             </div>
         </div>
     </div>
@@ -811,6 +1089,13 @@
             fuel: document.getElementById('fuel'),
             visited: document.getElementById('visited'),
             flightTime: document.getElementById('flight-time'),
+            altitudeNeedle: document.getElementById('altitude-needle'),
+            speedNeedle: document.getElementById('speed-needle'),
+            fuelNeedle: document.getElementById('fuel-needle'),
+            fuelGauge: document.getElementById('fuel-gauge'),
+            compassRose: document.getElementById('compass-rose'),
+            lowFuelLight: document.getElementById('low-fuel-light'),
+            landingLight: document.getElementById('landing-light'),
             landButton: document.getElementById('land-button'),
             upButton: document.getElementById('up-button'),
             downButton: document.getElementById('down-button'),
@@ -828,11 +1113,8 @@
             achievementText: document.getElementById('achievement-text'),
             joystick: document.getElementById('joystick-container'),
             joystickHandle: document.getElementById('joystick-handle'),
-            compassNeedle: document.getElementById('compass-needle'),
             miniMap: document.getElementById('mini-map'),
-            miniMapCanvas: document.getElementById('mini-map-canvas'),
-            weatherIcon: document.getElementById('weather-icon'),
-            weatherText: document.getElementById('weather-text')
+            miniMapCanvas: document.getElementById('mini-map-canvas')
         };
 
         // ============= SCENE SETUP =============
@@ -1214,20 +1496,6 @@
             const time = Date.now() * 0.0001;
             gameState.windForce.x = Math.sin(time) * 2;
             gameState.windForce.z = Math.cos(time * 0.7) * 2;
-            
-            // Change weather randomly
-            if (Math.random() < 0.001) {
-                const weathers = [
-                    { name: 'Clear', icon: '☀️', wind: 1 },
-                    { name: 'Cloudy', icon: '☁️', wind: 1.5 },
-                    { name: 'Windy', icon: '💨', wind: 3 }
-                ];
-                const weather = weathers[Math.floor(Math.random() * weathers.length)];
-                gameState.weather = weather.name.toLowerCase();
-                DOMElements.weatherIcon.textContent = weather.icon;
-                DOMElements.weatherText.textContent = weather.name;
-                gameState.windForce.multiplyScalar(weather.wind);
-            }
         }
         
         function checkPOIs() {
@@ -1308,16 +1576,38 @@
         }
 
         function updateHUD() {
+            // Update text values
             DOMElements.altitude.textContent = `${Math.round(gameState.altitude)}m`;
             DOMElements.speed.textContent = `${Math.round(gameState.speed)}km/h`;
             DOMElements.fuel.textContent = `${Math.round(gameState.fuel)}%`;
             DOMElements.visited.textContent = `${gameState.visitedCount}/${POI_DATA.length}`;
             
+            // Update altitude needle (0-200m range, -135 to +135 degrees)
+            const altAngle = (gameState.altitude / 200) * 270 - 135;
+            DOMElements.altitudeNeedle.style.transform = `translateX(-50%) rotate(${altAngle}deg)`;
+            
+            // Update speed needle (0-100km/h range, -135 to +135 degrees)
+            const speedAngle = (gameState.speed / 100) * 270 - 135;
+            DOMElements.speedNeedle.style.transform = `translateX(-50%) rotate(${speedAngle}deg)`;
+            
+            // Update fuel needle (0-100% range, -135 to +135 degrees)
+            const fuelAngle = (gameState.fuel / 100) * 270 - 135;
+            DOMElements.fuelNeedle.style.transform = `translateX(-50%) rotate(${fuelAngle}deg)`;
+            
             // Update fuel warning
             if (gameState.fuel < 20) {
-                DOMElements.fuel.classList.add('low-fuel');
+                DOMElements.fuelGauge.classList.add('low-fuel');
+                DOMElements.lowFuelLight.classList.add('active');
             } else {
-                DOMElements.fuel.classList.remove('low-fuel');
+                DOMElements.fuelGauge.classList.remove('low-fuel');
+                DOMElements.lowFuelLight.classList.remove('active');
+            }
+            
+            // Update landing light
+            if (gameState.nearPOI) {
+                DOMElements.landingLight.classList.add('active');
+            } else {
+                DOMElements.landingLight.classList.remove('active');
             }
             
             // Update flight time
@@ -1326,9 +1616,9 @@
             const seconds = elapsed % 60;
             DOMElements.flightTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             
-            // Update compass
-            const angle = helicopter.rotation.y * (180 / Math.PI);
-            DOMElements.compassNeedle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+            // Update compass (rotate the entire rose)
+            const angle = -helicopter.rotation.y * (180 / Math.PI);
+            DOMElements.compassRose.style.transform = `rotate(${angle}deg)`;
         }
         
         function updatePOIList() {
@@ -1437,4 +1727,4 @@
                 if (key === 'arrowup' || key === 'w') gameState.keys['forward'] = false;
                 if (key === 'arrowdown' || key === 's') gameState.keys['backward'] = false;
                 if (key === 'arrowleft' || key === 'a') gameState.keys['left'] = false;
-                if (key === 'arrowright' || key === 'd') gameState.keys['right'] = false;
+                if (key === 'arrowright' || key === 'd') gameState.keys['right
