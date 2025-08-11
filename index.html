@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoher Fläming Helicopter Adventure - Ultimate 3D Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;400;600;700&display=swap');
         
@@ -19,7 +20,6 @@
             overflow: hidden;
             position: relative;
             height: 100vh;
-            cursor: none;
         }
         
         #gameContainer {
@@ -34,31 +34,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-        }
-        
-        /* Custom Cursor */
-        .custom-cursor {
-            position: fixed;
-            width: 30px;
-            height: 30px;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10000;
-            transition: transform 0.1s ease;
-            mix-blend-mode: difference;
-        }
-        
-        .custom-cursor::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 4px;
-            height: 4px;
-            background: white;
-            border-radius: 50%;
         }
         
         /* Futuristic HUD */
@@ -80,6 +55,18 @@
             display: flex;
             gap: 40px;
             pointer-events: none;
+            animation: slideDown 1s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
         }
         
         .hud-panel {
@@ -127,13 +114,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 30px rgba(0,255,255,0.5);
-            animation: statPulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes statPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            filter: drop-shadow(0 0 20px rgba(0,255,255,0.5));
         }
         
         /* Fuel System */
@@ -242,17 +223,6 @@
                 inset 0 0 10px rgba(255,255,255,0.5);
         }
         
-        /* Altitude Indicator */
-        .altitude-indicator {
-            position: absolute;
-            right: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 80px;
-            height: 300px;
-            pointer-events: none;
-        }
-        
         /* Radar/Minimap */
         .radar-container {
             position: absolute;
@@ -337,14 +307,13 @@
             background-clip: text;
             text-align: center;
             margin-bottom: 20px;
-            text-shadow: 0 0 80px rgba(0,255,255,0.8);
+            filter: drop-shadow(0 0 40px rgba(0,255,255,0.8));
             animation: logoFloat 3s ease-in-out infinite;
-            letter-spacing: -2px;
         }
         
         @keyframes logoFloat {
-            0%, 100% { transform: translateY(0) rotateX(0deg); }
-            50% { transform: translateY(-20px) rotateX(5deg); }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
         }
         
         .game-subtitle {
@@ -380,58 +349,11 @@
                 inset 0 0 20px rgba(255,255,255,0.3);
         }
         
-        .start-button::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255,255,255,0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        
         .start-button:hover {
             transform: scale(1.05);
             box-shadow: 
                 0 0 80px rgba(255,0,255,0.7),
                 inset 0 0 30px rgba(255,255,255,0.5);
-        }
-        
-        .start-button:hover::before {
-            width: 400px;
-            height: 400px;
-        }
-        
-        /* POI Marker */
-        .poi-marker {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-        
-        .poi-beacon {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 3px solid rgba(255,255,0,0.8);
-            border-radius: 50%;
-            animation: beaconPulse 2s ease-out infinite;
-        }
-        
-        @keyframes beaconPulse {
-            0% {
-                transform: scale(0.5);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(2);
-                opacity: 0;
-            }
         }
         
         /* Achievement Notification */
@@ -551,17 +473,6 @@
             font-size: 28px;
         }
         
-        /* Particle System */
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: white;
-            border-radius: 50%;
-            pointer-events: none;
-            box-shadow: 0 0 6px currentColor;
-        }
-        
         /* Warning System */
         .warning-overlay {
             position: absolute;
@@ -598,14 +509,6 @@
                 display: flex;
             }
             
-            .custom-cursor {
-                display: none;
-            }
-            
-            body {
-                cursor: default;
-            }
-            
             .game-logo {
                 font-size: 48px;
             }
@@ -622,8 +525,7 @@
                 bottom: auto;
             }
             
-            .speed-indicator,
-            .altitude-indicator {
+            .speed-indicator {
                 display: none;
             }
             
@@ -631,42 +533,11 @@
                 width: 300px;
             }
         }
-        
-        /* Loading Animation */
-        .loading-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 3000;
-        }
-        
-        .loading-spinner {
-            width: 100px;
-            height: 100px;
-            border: 3px solid rgba(0,255,255,0.3);
-            border-top: 3px solid #00ffff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
-        
-        <!-- Custom Cursor -->
-        <div class="custom-cursor" id="cursor"></div>
         
         <!-- UI Layer -->
         <div id="ui">
@@ -694,13 +565,6 @@
             <div class="speed-indicator">
                 <div class="speed-bar">
                     <div class="speed-fill" id="speedFill" style="height: 0%"></div>
-                </div>
-            </div>
-            
-            <!-- Altitude Indicator -->
-            <div class="altitude-indicator">
-                <div class="speed-bar">
-                    <div class="speed-fill" id="altitudeFill" style="height: 50%"></div>
                 </div>
             </div>
             
@@ -755,22 +619,23 @@
                 <div style="font-size: 14px; color: #666;" id="achievementDesc">Description</div>
             </div>
         </div>
-        
-        <!-- Loading Screen -->
-        <div class="loading-screen" id="loadingScreen">
-            <div class="loading-spinner"></div>
-        </div>
     </div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Wait for Three.js to load
-        window.addEventListener('load', () => {
-            document.getElementById('loadingScreen').style.display = 'none';
+        // Initialize game when page loads
+        window.addEventListener('DOMContentLoaded', () => {
             initGame();
         });
         
         function initGame() {
+            // Check if Three.js is loaded
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js not loaded');
+                // Fallback to 2D version
+                init2DGame();
+                return;
+            }
+            
             // Three.js Scene Setup
             const scene = new THREE.Scene();
             scene.fog = new THREE.Fog(0x87CEEB, 100, 2000);
@@ -787,14 +652,12 @@
             const renderer = new THREE.WebGLRenderer({
                 canvas: document.getElementById('gameCanvas'),
                 antialias: true,
-                alpha: true
+                alpha: false
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.2;
             
             // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -807,55 +670,27 @@
             directionalLight.shadow.camera.right = 500;
             directionalLight.shadow.camera.top = 500;
             directionalLight.shadow.camera.bottom = -500;
-            directionalLight.shadow.mapSize.width = 2048;
-            directionalLight.shadow.mapSize.height = 2048;
             scene.add(directionalLight);
             
             // Sky
             const skyGeometry = new THREE.SphereGeometry(2000, 32, 32);
-            const skyMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    topColor: { value: new THREE.Color(0x0077ff) },
-                    bottomColor: { value: new THREE.Color(0xffffff) },
-                    offset: { value: 33 },
-                    exponent: { value: 0.6 }
-                },
-                vertexShader: `
-                    varying vec3 vWorldPosition;
-                    void main() {
-                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                        vWorldPosition = worldPosition.xyz;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform vec3 topColor;
-                    uniform vec3 bottomColor;
-                    uniform float offset;
-                    uniform float exponent;
-                    varying vec3 vWorldPosition;
-                    void main() {
-                        float h = normalize(vWorldPosition + offset).y;
-                        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-                    }
-                `,
+            const skyMaterial = new THREE.MeshBasicMaterial({
+                color: 0x87CEEB,
                 side: THREE.BackSide
             });
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
             
             // Terrain
-            const terrainGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
-            const terrainMaterial = new THREE.MeshStandardMaterial({
-                color: 0x3a5f3a,
-                roughness: 0.8,
-                metalness: 0.2
+            const terrainGeometry = new THREE.PlaneGeometry(2000, 2000, 50, 50);
+            const terrainMaterial = new THREE.MeshLambertMaterial({
+                color: 0x3a5f3a
             });
             
             // Add terrain variation
             const vertices = terrainGeometry.attributes.position.array;
             for (let i = 0; i < vertices.length; i += 3) {
-                vertices[i + 2] = Math.sin(vertices[i] * 0.01) * 20 + Math.cos(vertices[i + 1] * 0.01) * 20;
+                vertices[i + 2] = Math.sin(vertices[i] * 0.01) * 10 + Math.cos(vertices[i + 1] * 0.01) * 10;
             }
             terrainGeometry.computeVertexNormals();
             
@@ -864,17 +699,494 @@
             terrain.receiveShadow = true;
             scene.add(terrain);
             
-            // Trees
-            const treeGroup = new THREE.Group();
-            for (let i = 0; i < 200; i++) {
+            // Simple trees
+            for (let i = 0; i < 100; i++) {
                 const tree = new THREE.Group();
                 
                 // Trunk
-                const trunkGeometry = new THREE.CylinderGeometry(2, 3, 20);
-                const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                const trunkGeometry = new THREE.CylinderGeometry(2, 3, 15);
+                const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
                 const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                trunk.position.y = 10;
+                trunk.position.y = 7.5;
                 trunk.castShadow = true;
                 tree.add(trunk);
                 
                 // Leaves
+                const leavesGeometry = new THREE.SphereGeometry(10, 6, 5);
+                const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+                const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                leaves.position.y = 20;
+                leaves.castShadow = true;
+                tree.add(leaves);
+                
+                tree.position.x = (Math.random() - 0.5) * 1800;
+                tree.position.z = (Math.random() - 0.5) * 1800;
+                tree.scale.setScalar(0.5 + Math.random() * 0.5);
+                scene.add(tree);
+            }
+            
+            // Helicopter Model
+            const helicopter = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.SphereGeometry(8, 8, 6);
+            const bodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1a1a2e,
+                shininess: 100
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.scale.set(1.5, 1, 1);
+            body.castShadow = true;
+            helicopter.add(body);
+            
+            // Cockpit
+            const cockpitGeometry = new THREE.SphereGeometry(5, 8, 6);
+            const cockpitMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4494ff,
+                shininess: 100
+            });
+            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpit.position.set(8, 1, 0);
+            cockpit.scale.set(1.2, 0.9, 1.1);
+            helicopter.add(cockpit);
+            
+            // Tail
+            const tailGeometry = new THREE.CylinderGeometry(3, 1, 25);
+            const tailMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1a1a2e,
+                shininess: 100
+            });
+            const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+            tail.position.set(-15, 0, 0);
+            tail.rotation.z = Math.PI / 2;
+            tail.castShadow = true;
+            helicopter.add(tail);
+            
+            // Main Rotor
+            const rotorGroup = new THREE.Group();
+            const rotorGeometry = new THREE.BoxGeometry(80, 0.5, 3);
+            const rotorMaterial = new THREE.MeshPhongMaterial({
+                color: 0x333333
+            });
+            const rotor1 = new THREE.Mesh(rotorGeometry, rotorMaterial);
+            const rotor2 = new THREE.Mesh(rotorGeometry, rotorMaterial);
+            rotor2.rotation.y = Math.PI / 2;
+            rotorGroup.add(rotor1, rotor2);
+            rotorGroup.position.y = 8;
+            helicopter.add(rotorGroup);
+            
+            helicopter.position.y = 50;
+            scene.add(helicopter);
+            
+            // POI Markers
+            const pois = [
+                { id: 1, x: -400, z: -400, name: "Stadt und Burg Ziesar", visited: false },
+                { id: 2, x: 300, z: -450, name: "Gutspark Dahlen", visited: false },
+                { id: 3, x: -200, z: -100, name: "Klein Briesener Bach", visited: false },
+                { id: 4, x: 200, z: -200, name: "Paradies Dippmannsdorf", visited: false },
+                { id: 5, x: -450, z: 200, name: "Töpferort Görzke", visited: false },
+                { id: 6, x: 400, z: 0, name: "Hagelberg", visited: false },
+                { id: 7, x: 0, z: 0, name: "Bad Belzig", visited: false },
+                { id: 8, x: -300, z: 300, name: "Belziger Landschaftswiesen", visited: false },
+                { id: 9, x: 250, z: 250, name: "Wiesenburg", visited: false },
+                { id: 10, x: -100, z: 400, name: "Naturparkzentrum", visited: false },
+                { id: 11, x: 450, z: 250, name: "Raben mit Burg", visited: false },
+                { id: 12, x: -500, z: 400, name: "Niemegk", visited: false },
+                { id: 13, x: 100, z: -350, name: "Flämingbuchen", visited: false },
+                { id: 14, x: -250, z: 100, name: "Brautrummel", visited: false },
+                { id: 15, x: 350, z: 350, name: "Neuendorfer Rummel", visited: false },
+                { id: 16, x: -50, z: 200, name: "Garrey", visited: false }
+            ];
+            
+            const poiMarkers = [];
+            pois.forEach(poi => {
+                const markerGroup = new THREE.Group();
+                
+                // Glowing sphere
+                const sphereGeometry = new THREE.SphereGeometry(5, 16, 16);
+                const sphereMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    emissive: 0xffff00
+                });
+                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                markerGroup.add(sphere);
+                
+                // Outer glow
+                const glowGeometry = new THREE.SphereGeometry(8, 16, 16);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                markerGroup.add(glow);
+                
+                // Beam of light
+                const beamGeometry = new THREE.CylinderGeometry(0.5, 5, 100);
+                const beamMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+                beam.position.y = 50;
+                markerGroup.add(beam);
+                
+                markerGroup.position.set(poi.x, 20, poi.z);
+                markerGroup.userData = poi;
+                scene.add(markerGroup);
+                poiMarkers.push(markerGroup);
+            });
+            
+            // Game State
+            let gameRunning = false;
+            let score = 0;
+            let fuel = 100;
+            let visitedPOIs = new Set();
+            let gameStartTime = 0;
+            let helicopterVelocity = new THREE.Vector3();
+            let helicopterRotation = 0;
+            
+            // Controls
+            const keys = {};
+            let joystickVector = { x: 0, y: 0 };
+            let mobileBoost = false;
+            let mobileLand = false;
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+            
+            // Mobile Joystick
+            const joystick = document.getElementById('joystick');
+            const joystickKnob = document.getElementById('joystickKnob');
+            let joystickActive = false;
+            
+            function handleJoystickStart(e) {
+                e.preventDefault();
+                joystickActive = true;
+                handleJoystickMove(e);
+            }
+            
+            function handleJoystickMove(e) {
+                if (!joystickActive) return;
+                e.preventDefault();
+                
+                const rect = joystick.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                let touch = e.touches ? e.touches[0] : e;
+                
+                let deltaX = touch.clientX - centerX;
+                let deltaY = touch.clientY - centerY;
+                
+                const maxRadius = 70;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                if (distance > maxRadius) {
+                    deltaX = (deltaX / distance) * maxRadius;
+                    deltaY = (deltaY / distance) * maxRadius;
+                }
+                
+                joystickKnob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                
+                joystickVector.x = deltaX / maxRadius;
+                joystickVector.y = -deltaY / maxRadius;
+            }
+            
+            function handleJoystickEnd(e) {
+                e.preventDefault();
+                joystickActive = false;
+                joystickVector.x = 0;
+                joystickVector.y = 0;
+                joystickKnob.style.transform = 'translate(-50%, -50%)';
+            }
+            
+            joystick.addEventListener('touchstart', handleJoystickStart, { passive: false });
+            joystick.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            joystick.addEventListener('touchend', handleJoystickEnd, { passive: false });
+            joystick.addEventListener('mousedown', (e) => {
+                handleJoystickStart(e);
+                document.addEventListener('mousemove', handleJoystickMove);
+                document.addEventListener('mouseup', () => {
+                    handleJoystickEnd(e);
+                    document.removeEventListener('mousemove', handleJoystickMove);
+                }, { once: true });
+            });
+            
+            // Mobile buttons
+            document.getElementById('boostBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                mobileBoost = true;
+            });
+            
+            document.getElementById('boostBtn').addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileBoost = false;
+            });
+            
+            document.getElementById('landBtn').addEventListener('click', () => {
+                mobileLand = true;
+                setTimeout(() => { mobileLand = false; }, 100);
+            });
+            
+            // Start button
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            
+            function startGame() {
+                gameRunning = true;
+                gameStartTime = Date.now();
+                document.getElementById('startScreen').classList.add('hidden');
+                animate();
+            }
+            
+            // Update helicopter physics
+            function updateHelicopter(deltaTime) {
+                // Input handling
+                let inputX = 0;
+                let inputZ = 0;
+                
+                if (keys['w'] || keys['arrowup']) inputZ -= 1;
+                if (keys['s'] || keys['arrowdown']) inputZ += 1;
+                if (keys['a'] || keys['arrowleft']) inputX -= 1;
+                if (keys['d'] || keys['arrowright']) inputX += 1;
+                
+                // Add joystick input
+                inputX += joystickVector.x;
+                inputZ -= joystickVector.y;
+                
+                // Apply acceleration
+                const acceleration = (keys['shift'] || mobileBoost) ? 0.8 : 0.4;
+                helicopterVelocity.x += inputX * acceleration;
+                helicopterVelocity.z += inputZ * acceleration;
+                
+                // Apply friction
+                helicopterVelocity.multiplyScalar(0.95);
+                
+                // Limit speed
+                const maxSpeed = (keys['shift'] || mobileBoost) ? 3 : 2;
+                if (helicopterVelocity.length() > maxSpeed) {
+                    helicopterVelocity.normalize().multiplyScalar(maxSpeed);
+                }
+                
+                // Update position
+                helicopter.position.x += helicopterVelocity.x;
+                helicopter.position.z += helicopterVelocity.z;
+                
+                // Boundary limits
+                helicopter.position.x = Math.max(-900, Math.min(900, helicopter.position.x));
+                helicopter.position.z = Math.max(-900, Math.min(900, helicopter.position.z));
+                
+                // Rotate helicopter based on velocity
+                if (helicopterVelocity.length() > 0.1) {
+                    const targetRotation = Math.atan2(helicopterVelocity.x, -helicopterVelocity.z);
+                    helicopterRotation += (targetRotation - helicopterRotation) * 0.1;
+                    helicopter.rotation.y = helicopterRotation;
+                }
+                
+                // Tilt based on movement
+                helicopter.rotation.z = -helicopterVelocity.x * 0.1;
+                helicopter.rotation.x = helicopterVelocity.z * 0.1;
+                
+                // Rotate rotors
+                rotorGroup.rotation.y += 0.5;
+                
+                // Update camera to follow helicopter
+                const cameraOffset = new THREE.Vector3(0, 100, 150);
+                cameraOffset.applyQuaternion(helicopter.quaternion);
+                camera.position.lerp(helicopter.position.clone().add(cameraOffset), 0.1);
+                camera.lookAt(helicopter.position);
+                
+                // Check POI proximity
+                poiMarkers.forEach(marker => {
+                    const distance = helicopter.position.distanceTo(marker.position);
+                    
+                    if (distance < 50) {
+                        // Pulsing effect
+                        marker.scale.setScalar(1 + Math.sin(Date.now() * 0.01) * 0.2);
+                        
+                        if ((keys[' '] || mobileLand) && !marker.userData.visited) {
+                            visitPOI(marker);
+                        }
+                    } else {
+                        marker.scale.setScalar(1);
+                    }
+                });
+                
+                // Fuel consumption
+                const fuelConsumption = (keys['shift'] || mobileBoost) ? 0.3 : 0.1;
+                fuel = Math.max(0, fuel - fuelConsumption * deltaTime);
+                document.getElementById('fuelFill').style.width = fuel + '%';
+                
+                // Warning system
+                const warningOverlay = document.getElementById('warningOverlay');
+                if (fuel < 20) {
+                    warningOverlay.classList.add('active');
+                } else {
+                    warningOverlay.classList.remove('active');
+                }
+                
+                // Update speed indicator
+                const speed = helicopterVelocity.length();
+                document.getElementById('speedFill').style.height = (speed / maxSpeed * 100) + '%';
+            }
+            
+            function visitPOI(marker) {
+                const poi = marker.userData;
+                poi.visited = true;
+                visitedPOIs.add(poi.id);
+                score += 100;
+                fuel = Math.min(100, fuel + 30);
+                
+                // Update marker color
+                marker.children.forEach(child => {
+                    if (child.material) {
+                        child.material.color.setHex(0x00ff00);
+                    }
+                });
+                
+                // Update UI
+                document.getElementById('score').textContent = score;
+                document.getElementById('pois').textContent = visitedPOIs.size + '/16';
+                
+                // Show achievement
+                if (visitedPOIs.size === 1) {
+                    showAchievement('First Discovery!', 'Your journey begins');
+                } else if (visitedPOIs.size === 8) {
+                    showAchievement('Halfway There!', '8 locations discovered');
+                } else if (visitedPOIs.size === 16) {
+                    showAchievement('Master Explorer!', 'All locations found!');
+                    score += 1000;
+                }
+            }
+            
+            function showAchievement(title, desc) {
+                const achievement = document.getElementById('achievement');
+                document.getElementById('achievementTitle').textContent = title;
+                document.getElementById('achievementDesc').textContent = desc;
+                achievement.classList.add('show');
+                
+                setTimeout(() => {
+                    achievement.classList.remove('show');
+                }, 4000);
+            }
+            
+            function updateRadar() {
+                const radarCanvas = document.getElementById('radarCanvas');
+                const radarCtx = radarCanvas.getContext('2d');
+                radarCanvas.width = 250;
+                radarCanvas.height = 250;
+                
+                const centerX = 125;
+                const centerY = 125;
+                
+                // Clear
+                radarCtx.clearRect(0, 0, 250, 250);
+                
+                // Grid
+                radarCtx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
+                radarCtx.lineWidth = 1;
+                for (let i = 1; i <= 3; i++) {
+                    radarCtx.beginPath();
+                    radarCtx.arc(centerX, centerY, i * 40, 0, Math.PI * 2);
+                    radarCtx.stroke();
+                }
+                
+                // POIs
+                pois.forEach(poi => {
+                    const relX = (poi.x / 1000) * 100;
+                    const relZ = (poi.z / 1000) * 100;
+                    
+                    radarCtx.fillStyle = poi.visited ? '#00ff00' : '#ffff00';
+                    radarCtx.beginPath();
+                    radarCtx.arc(centerX + relX, centerY + relZ, 4, 0, Math.PI * 2);
+                    radarCtx.fill();
+                });
+                
+                // Helicopter
+                const heliX = (helicopter.position.x / 1000) * 100;
+                const heliZ = (helicopter.position.z / 1000) * 100;
+                
+                radarCtx.fillStyle = '#ff00ff';
+                radarCtx.beginPath();
+                radarCtx.arc(centerX + heliX, centerY + heliZ, 6, 0, Math.PI * 2);
+                radarCtx.fill();
+            }
+            
+            function updateUI() {
+                if (gameRunning) {
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById('time').textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    document.getElementById('score').textContent = score;
+                }
+            }
+            
+            // Animation loop
+            let lastTime = 0;
+            function animate(currentTime = 0) {
+                if (!gameRunning) return;
+                
+                const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+                lastTime = currentTime;
+                
+                updateHelicopter(deltaTime || 0.016);
+                updateRadar();
+                updateUI();
+                
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+            }
+            
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        // Fallback 2D version if Three.js fails
+        function init2DGame() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Simple 2D game implementation
+            const helicopter = { x: canvas.width/2, y: canvas.height/2, vx: 0, vy: 0 };
+            let gameRunning = false;
+            
+            document.getElementById('startBtn').addEventListener('click', () => {
+                gameRunning = true;
+                document.getElementById('startScreen').classList.add('hidden');
+                animate2D();
+            });
+            
+            function animate2D() {
+                if (!gameRunning) return;
+                
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.arc(helicopter.x, helicopter.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                requestAnimationFrame(animate2D);
+            }
+        }
+    </script>
+</body>
+</html>
