@@ -2,654 +2,821 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hoher Fläming Helicopter Explorer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoher Fläming Helicopter Adventure - Enhanced Edition</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
         }
-
+        
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             overflow: hidden;
-            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
-            touch-action: none;
+            position: relative;
+            height: 100vh;
         }
-
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
+        
+        #gameContainer {
+            position: relative;
             width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        /* Loading Screen */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 100vh;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            transition: opacity 0.5s;
         }
-
-        #loading-screen.hidden {
-            opacity: 0;
+        
+        #gameCanvas {
+            position: relative;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8C8 100%);
+            cursor: crosshair;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
             pointer-events: none;
+            z-index: 10;
         }
-
-        .loading-content {
-            text-align: center;
-            color: white;
-        }
-
-        .helicopter-icon {
-            font-size: 80px;
-            animation: hover 2s ease-in-out infinite;
-            margin-bottom: 20px;
-        }
-
-        @keyframes hover {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-
-        .loading-text {
-            font-size: 24px;
-            margin-bottom: 30px;
-        }
-
-        .progress-bar {
-            width: 300px;
-            height: 6px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: white;
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        /* HUD */
-        #hud {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            z-index: 100;
-            min-width: 150px;
-            backdrop-filter: blur(10px);
-        }
-
-        .hud-item {
-            margin: 3px 0;
+        
+        .hud {
             display: flex;
             justify-content: space-between;
-        }
-
-        .hud-label {
-            color: #aaa;
-        }
-
-        .hud-value {
-            color: #0f0;
-            font-weight: bold;
-        }
-
-        /* Joystick Container */
-        #joystick-zone {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 140px;
-            height: 140px;
-            z-index: 200;
-            touch-action: none;
-        }
-
-        #joystick-base {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(0,0,0,0.7), rgba(0,0,0,0.4));
-            border: 3px solid rgba(0,255,0,0.5);
-            border-radius: 50%;
-            box-shadow: 0 0 20px rgba(0,255,0,0.3);
-        }
-
-        #joystick-stick {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: radial-gradient(circle, #0f0, #0a0);
-            border: 2px solid #fff;
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 15px rgba(0,255,0,0.8);
-            transition: none;
+            align-items: flex-start;
             pointer-events: none;
         }
-
-        /* Action Buttons */
-        #action-buttons {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
+        
+        .hud-panel {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            pointer-events: auto;
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .stats {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .stat {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            z-index: 200;
-        }
-
-        .action-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,0,0,0.7), rgba(0,0,0,0.4));
-            color: white;
-            border: 3px solid rgba(0,255,0,0.5);
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 20px rgba(0,255,0,0.3);
-            touch-action: none;
         }
-
-        .action-btn:active {
-            transform: scale(0.9);
-            background: radial-gradient(circle, rgba(0,255,0,0.3), rgba(0,0,0,0.4));
+        
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
         }
-
-        .action-btn.altitude-up {
-            background: radial-gradient(circle, rgba(0,100,255,0.7), rgba(0,0,0,0.4));
-            border-color: rgba(0,100,255,0.5);
+        
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        .action-btn.altitude-down {
-            background: radial-gradient(circle, rgba(255,100,0,0.7), rgba(0,0,0,0.4));
-            border-color: rgba(255,100,0,0.5);
-        }
-
-        /* Mini Map */
-        #minimap {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 120px;
-            height: 120px;
-            background: rgba(0,0,0,0.7);
-            border: 2px solid rgba(0,255,0,0.5);
-            border-radius: 8px;
-            z-index: 100;
+        
+        .fuel-bar {
+            width: 200px;
+            height: 30px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 15px;
             overflow: hidden;
-            backdrop-filter: blur(10px);
+            position: relative;
         }
-
-        #minimap-canvas {
-            width: 100%;
+        
+        .fuel-fill {
             height: 100%;
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
-
-        /* Instructions - Hidden on mobile */
-        #instructions {
-            position: fixed;
+        
+        .fuel-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -200%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 2s infinite;
+        }
+        
+        @keyframes shine {
+            to {
+                left: 200%;
+            }
+        }
+        
+        .controls-hint {
+            position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0,0,0,0.7);
             color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 11px;
-            z-index: 100;
-            text-align: center;
-            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 14px;
+            display: flex;
+            gap: 20px;
+            animation: pulse 2s infinite;
         }
-
-        /* Score popup */
-        .score-popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,255,0,0.9);
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 1; }
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .key {
+            background: white;
+            color: black;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102,126,234,0.95) 0%, rgba(118,75,162,0.95) 100%);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        
+        .game-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 48px;
+            font-weight: 900;
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            z-index: 500;
-            animation: scorePopup 1s ease-out forwards;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .game-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+        
+        .start-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            font-size: 20px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(245,87,108,0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(245,87,108,0.5);
+        }
+        
+        .poi-popup {
+            position: absolute;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 300px;
+            z-index: 50;
+            opacity: 0;
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.3s ease;
             pointer-events: none;
         }
-
-        @keyframes scorePopup {
-            0% {
-                transform: translate(-50%, -50%) scale(0);
-                opacity: 0;
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.2);
-                opacity: 1;
-            }
-            100% {
-                transform: translate(-50%, -100px) scale(1);
-                opacity: 0;
-            }
+        
+        .poi-popup.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
         }
-
-        /* Mobile/Desktop specific */
-        @media (min-width: 769px) {
-            #joystick-zone {
-                display: none;
-            }
-            #action-buttons {
-                display: none;
-            }
-            #instructions {
-                display: block;
-            }
-            #hud {
-                top: 20px;
-                left: 20px;
-                padding: 15px;
-                font-size: 14px;
-                min-width: 200px;
-            }
-            #minimap {
-                width: 150px;
-                height: 150px;
-            }
+        
+        .poi-title {
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #333;
         }
-
-        @media (max-width: 768px) {
-            #instructions {
-                display: none;
-            }
-            .desktop-only {
-                display: none;
-            }
+        
+        .poi-description {
+            color: #666;
+            line-height: 1.5;
+            font-size: 14px;
         }
-
-        /* Landscape mode optimization */
-        @media (max-height: 500px) {
-            #hud {
-                top: 5px;
-                left: 5px;
-                padding: 5px;
-                font-size: 10px;
-                min-width: 120px;
-            }
-            #minimap {
-                width: 80px;
-                height: 80px;
-                top: 5px;
-                right: 5px;
-            }
-            #joystick-zone {
-                width: 100px;
-                height: 100px;
-                bottom: 10px;
-                left: 10px;
-            }
-            .action-btn {
-                width: 45px;
-                height: 45px;
-                font-size: 18px;
-            }
-            #action-buttons {
-                bottom: 10px;
-                right: 10px;
-            }
+        
+        .minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.9);
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        #minimapCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 13px;
+        }
+        
+        .weather-effects {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 100px;
+            opacity: 0.4;
+            animation: drift 20s infinite linear;
+        }
+        
+        @keyframes drift {
+            from { transform: translateX(-200px); }
+            to { transform: translateX(calc(100vw + 200px)); }
+        }
+        
+        .achievement {
+            position: fixed;
+            top: 100px;
+            right: -400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 200;
+            transition: right 0.5s ease;
+        }
+        
+        .achievement.show {
+            right: 20px;
+        }
+        
+        .achievement-icon {
+            font-size: 30px;
+        }
+        
+        .achievement-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .achievement-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .achievement-desc {
+            font-size: 14px;
+            opacity: 0.9;
         }
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loading-content">
-            <div class="helicopter-icon">🚁</div>
-            <div class="loading-text">Preparing Flight...</div>
-            <div class="progress-bar">
-                <div class="progress-fill"></div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui">
+            <div class="hud">
+                <div class="hud-panel">
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">Score</div>
+                            <div class="stat-value" id="score">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">POIs</div>
+                            <div class="stat-value" id="pois">0/16</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Time</div>
+                            <div class="stat-value" id="time">00:00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hud-panel">
+                    <div class="stat">
+                        <div class="stat-label">Fuel</div>
+                        <div class="fuel-bar">
+                            <div class="fuel-fill" id="fuelFill" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-hint">
+            <div class="control-item">
+                <span class="key">WASD/↑↓←→</span> Move
+            </div>
+            <div class="control-item">
+                <span class="key">Space</span> Land
+            </div>
+            <div class="control-item">
+                <span class="key">Shift</span> Boost
+            </div>
+        </div>
+        
+        <div class="minimap">
+            <canvas id="minimapCanvas"></canvas>
+        </div>
+        
+        <div class="weather-effects" id="weatherEffects"></div>
+        
+        <div id="startScreen">
+            <h1 class="game-title">🚁 Hoher Fläming Adventure</h1>
+            <p class="game-subtitle">Explore 16 stunning locations across Brandenburg's Nature Park</p>
+            <button class="start-button" id="startBtn">Start Flying</button>
+        </div>
+        
+        <div class="poi-popup" id="poiPopup">
+            <div class="poi-title" id="poiTitle"></div>
+            <div class="poi-description" id="poiDescription"></div>
+        </div>
+        
+        <div class="achievement" id="achievement">
+            <div class="achievement-icon">🏆</div>
+            <div class="achievement-text">
+                <div class="achievement-title" id="achievementTitle">Achievement Unlocked!</div>
+                <div class="achievement-desc" id="achievementDesc">Description</div>
             </div>
         </div>
     </div>
-
-    <!-- Canvas Container -->
-    <div id="canvas-container"></div>
-
-    <!-- HUD -->
-    <div id="hud">
-        <div class="hud-item">
-            <span class="hud-label">Altitude:</span>
-            <span class="hud-value" id="altitude">100m</span>
-        </div>
-        <div class="hud-item">
-            <span class="hud-label">Speed:</span>
-            <span class="hud-value" id="speed">0 km/h</span>
-        </div>
-        <div class="hud-item">
-            <span class="hud-label">Fuel:</span>
-            <span class="hud-value" id="fuel">100%</span>
-        </div>
-        <div class="hud-item">
-            <span class="hud-label">Score:</span>
-            <span class="hud-value" id="score">0</span>
-        </div>
-    </div>
-
-    <!-- Mini Map -->
-    <div id="minimap">
-        <canvas id="minimap-canvas"></canvas>
-    </div>
-
-    <!-- Mobile Joystick -->
-    <div id="joystick-zone">
-        <div id="joystick-base"></div>
-        <div id="joystick-stick"></div>
-    </div>
-
-    <!-- Mobile Action Buttons -->
-    <div id="action-buttons">
-        <button class="action-btn altitude-up" id="up-btn" title="Up">↑</button>
-        <button class="action-btn altitude-down" id="down-btn" title="Down">↓</button>
-    </div>
-
-    <!-- Desktop Instructions -->
-    <div id="instructions">
-        <strong>Controls:</strong> Arrow Keys to move | Q/E for altitude | Collect yellow markers!
-    </div>
-
+    
     <script>
-        // Game variables
-        let scene, camera, renderer;
-        let helicopter, terrain;
-        let rotorMain, rotorTail;
-        let pois = [];
-        let gameState = {
-            altitude: 100,
+        // Game Configuration
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        const minimapCtx = minimapCanvas.getContext('2d');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = Math.min(window.innerWidth - 40, 1200);
+            canvas.height = Math.min(window.innerHeight - 40, 800);
+            minimapCanvas.width = 200;
+            minimapCanvas.height = 200;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Game State
+        let gameRunning = false;
+        let animationId = null;
+        let gameStartTime = 0;
+        let score = 0;
+        let fuel = 100;
+        let visitedPOIs = new Set();
+        let particles = [];
+        let achievements = [];
+        
+        // Helicopter
+        const helicopter = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            rotorAngle: 0,
+            size: 25,
             speed: 0,
-            fuel: 100,
-            score: 0,
-            position: { x: 0, z: 0 },
-            velocity: { x: 0, z: 0, y: 0 }
+            maxSpeed: 5,
+            acceleration: 0.2,
+            friction: 0.95,
+            boosting: false,
+            trail: []
         };
-
-        // Control states
-        let controls = {
-            forward: false,
-            backward: false,
-            left: false,
-            right: false,
-            up: false,
-            down: false
-        };
-
-        // Joystick variables
-        let joystick = {
-            active: false,
-            startX: 0,
-            startY: 0,
-            currentX: 0,
-            currentY: 0,
-            maxDistance: 50
-        };
-
-        // Initialize loading
-        function startLoading() {
-            const progressBar = document.querySelector('.progress-fill');
-            let progress = 0;
-            
-            const loadInterval = setInterval(() => {
-                progress += 20;
-                progressBar.style.width = progress + '%';
-                
-                if (progress >= 100) {
-                    clearInterval(loadInterval);
-                    setTimeout(() => {
-                        document.getElementById('loading-screen').classList.add('hidden');
-                        init();
-                        animate();
-                    }, 500);
-                }
-            }, 300);
-        }
-
-        // Initialize Three.js scene
-        function init() {
-            // Scene setup
-            scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x87CEEB, 100, 1000);
-
-            // Camera setup
-            camera = new THREE.PerspectiveCamera(
-                75,
-                window.innerWidth / window.innerHeight,
-                0.1,
-                2000
-            );
-            camera.position.set(0, 150, 200);
-            camera.lookAt(0, 0, 0);
-
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.setClearColor(0x87CEEB, 1);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(100, 100, 50);
-            directionalLight.castShadow = true;
-            directionalLight.shadow.camera.left = -200;
-            directionalLight.shadow.camera.right = 200;
-            directionalLight.shadow.camera.top = 200;
-            directionalLight.shadow.camera.bottom = -200;
-            scene.add(directionalLight);
-
-            // Create terrain
-            createTerrain();
-
-            // Create helicopter
-            createHelicopter();
-
-            // Create POIs
-            createPOIs();
-
-            // Setup controls
-            setupControls();
-
-            // Setup joystick for mobile
-            setupJoystick();
-
-            // Setup minimap
-            setupMinimap();
-
-            // Handle resize
-            window.addEventListener('resize', onWindowResize);
-        }
-
-        // Create terrain
-        function createTerrain() {
-            const geometry = new THREE.PlaneGeometry(1000, 1000, 50, 50);
-            const material = new THREE.MeshLambertMaterial({ 
-                color: 0x3a7a3a,
-                wireframe: false
-            });
-
-            // Add height variation
-            const vertices = geometry.attributes.position.array;
-            for (let i = 0; i < vertices.length; i += 3) {
-                const x = vertices[i];
-                const y = vertices[i + 1];
-                vertices[i + 2] = Math.sin(x * 0.01) * 20 + Math.cos(y * 0.01) * 20 + Math.random() * 5;
+        
+        // POIs (Points of Interest)
+        const pois = [
+            { id: 1, x: 0.2, y: 0.2, name: "Stadt und Burg Ziesar", description: "Historic bishop's residence with medieval castle", visited: false, icon: "🏰" },
+            { id: 2, x: 0.7, y: 0.15, name: "Gutspark Dahlen", description: "English-style park with scenic vistas", visited: false, icon: "🌳" },
+            { id: 3, x: 0.35, y: 0.4, name: "Klein Briesener Bach", description: "Protected stream area with unique ecosystem", visited: false, icon: "🏞️" },
+            { id: 4, x: 0.6, y: 0.35, name: "Paradies Dippmannsdorf", description: "Nature reserve with 30+ natural springs", visited: false, icon: "💧" },
+            { id: 5, x: 0.15, y: 0.6, name: "Töpferort Görzke", description: "Traditional pottery village", visited: false, icon: "🏺" },
+            { id: 6, x: 0.8, y: 0.45, name: "Hagelberg", description: "Site of 1813 Napoleonic battle", visited: false, icon: "⚔️" },
+            { id: 7, x: 0.5, y: 0.5, name: "Bad Belzig", description: "Castle with panoramic views", visited: false, icon: "🏰" },
+            { id: 8, x: 0.25, y: 0.75, name: "Belziger Landschaftswiesen", description: "Bird sanctuary viewpoint", visited: false, icon: "🦅" },
+            { id: 9, x: 0.65, y: 0.7, name: "Wiesenburg", description: "Picturesque castle and park", visited: false, icon: "🏰" },
+            { id: 10, x: 0.4, y: 0.85, name: "Naturparkzentrum", description: "Nature park information center", visited: false, icon: "ℹ️" },
+            { id: 11, x: 0.85, y: 0.65, name: "Raben mit Burg", description: "Important border castle", visited: false, icon: "🏰" },
+            { id: 12, x: 0.1, y: 0.85, name: "Niemegk", description: "Historic town with local culture", visited: false, icon: "🏘️" },
+            { id: 13, x: 0.55, y: 0.25, name: "Flämingbuchen", description: "Unique beech tree islands", visited: false, icon: "🌲" },
+            { id: 14, x: 0.3, y: 0.55, name: "Brautrummel", description: "Periglacial valley with giant stone", visited: false, icon: "🪨" },
+            { id: 15, x: 0.75, y: 0.8, name: "Neuendorfer Rummel", description: "Ice Age dry valley", visited: false, icon: "🏔️" },
+            { id: 16, x: 0.45, y: 0.65, name: "Garrey", description: "Observation deck at old waterworks", visited: false, icon: "👁️" }
+        ];
+        
+        // Input handling
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === 'Shift') {
+                helicopter.boosting = true;
             }
-            geometry.computeVertexNormals();
-
-            terrain = new THREE.Mesh(geometry, material);
-            terrain.rotation.x = -Math.PI / 2;
-            terrain.receiveShadow = true;
-            scene.add(terrain);
-
-            // Add trees
-            for (let i = 0; i < 100; i++) {
-                const treeGeometry = new THREE.ConeGeometry(5, 20, 6);
-                const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x0d5d0d });
-                const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-                
-                tree.position.x = (Math.random() - 0.5) * 800;
-                tree.position.z = (Math.random() - 0.5) * 800;
-                tree.position.y = 10;
-                tree.castShadow = true;
-                
-                scene.add(tree);
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+            if (e.key === 'Shift') {
+                helicopter.boosting = false;
+            }
+        });
+        
+        // Start button click handler
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        
+        // Start game
+        function startGame() {
+            gameRunning = true;
+            gameStartTime = Date.now();
+            
+            // Initialize helicopter position
+            helicopter.x = canvas.width / 2;
+            helicopter.y = canvas.height / 2;
+            
+            // Hide start screen
+            const startScreen = document.getElementById('startScreen');
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+            }, 500);
+            
+            // Initialize weather
+            createClouds();
+            
+            // Start game loop
+            gameLoop();
+        }
+        
+        // Create weather effects
+        function createClouds() {
+            const weatherEffects = document.getElementById('weatherEffects');
+            for (let i = 0; i < 5; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.style.width = Math.random() * 200 + 100 + 'px';
+                cloud.style.height = Math.random() * 60 + 40 + 'px';
+                cloud.style.top = Math.random() * 40 + '%';
+                cloud.style.left = Math.random() * 100 + '%';
+                cloud.style.animationDelay = Math.random() * 20 + 's';
+                cloud.style.animationDuration = (Math.random() * 20 + 20) + 's';
+                weatherEffects.appendChild(cloud);
             }
         }
-
-        // Create helicopter
-        function createHelicopter() {
-            helicopter = new THREE.Group();
-
-            // Body
-            const bodyGeometry = new THREE.BoxGeometry(8, 6, 20);
-            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x2c3e50 });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.castShadow = true;
-            helicopter.add(body);
-
-            // Cockpit
-            const cockpitGeometry = new THREE.SphereGeometry(5, 8, 6);
-            const cockpitMaterial = new THREE.MeshPhongMaterial({ color: 0x3498db });
-            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-            cockpit.position.z = 8;
-            cockpit.scale.z = 1.5;
-            helicopter.add(cockpit);
-
-            // Main rotor
-            const rotorGeometry = new THREE.BoxGeometry(80, 0.5, 3);
-            const rotorMaterial = new THREE.MeshPhongMaterial({ color: 0x34495e });
-            rotorMain = new THREE.Mesh(rotorGeometry, rotorMaterial);
-            rotorMain.position.y = 5;
-            helicopter.add(rotorMain);
-
-            // Tail
-            const tailGeometry = new THREE.BoxGeometry(3, 4, 25);
-            const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-            tail.position.z = -20;
-            helicopter.add(tail);
-
-            // Tail rotor
-            const tailRotorGeometry = new THREE.BoxGeometry(12, 12, 0.5);
-            rotorTail = new THREE.Mesh(tailRotorGeometry, rotorMaterial);
-            rotorTail.position.set(-2, 2, -32);
-            helicopter.add(rotorTail);
-
-            // Landing skids
-            const skidGeometry = new THREE.CylinderGeometry(0.5, 0.5, 30);
-            const skidMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
-            
-            const skid1 = new THREE.Mesh(skidGeometry, skidMaterial);
-            skid1.rotation.z = Math.PI / 2;
-            skid1.position.set(-4, -5, 0);
-            helicopter.add(skid1);
-            
-            const skid2 = new THREE.Mesh(skidGeometry, skidMaterial);
-            skid2.rotation.z = Math.PI / 2;
-            skid2.position.set(4, -5, 0);
-            helicopter.add(skid2);
-
-            helicopter.position.y = gameState.altitude;
-            scene.add(helicopter);
-        }
-
-        // Create POIs
-        function createPOIs() {
-            const poiData = [
-                { name: "Bad Belzig Castle", x: 200, z: 150 },
-                { name: "Rabenstein Castle", x: -180, z: 200 },
-                { name: "Spring Park", x: -100, z: -150 },
-                { name: "Hagelberg Hill", x: 250, z: -100 },
-                { name: "Wiesenburg Castle", x: 0, z: 300 }
-            ];
-
-            poiData.forEach(poi => {
-                const markerGeometry = new THREE.CylinderGeometry(0, 10, 30, 4);
-                const markerMaterial = new THREE.MeshPhongMaterial({ 
-                    color: 0xffff00,
-                    emissive: 0xffff00,
-                    emissiveIntensity: 0.5
-                });
-                const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-                marker.position.set(poi.x, 20, poi.z);
-                marker.castShadow = true;
-                marker.userData = { name: poi.name, collected: false };
-                
-                scene.add(marker);
-                pois.push(marker);
-            });
-        }
-
-        // Setup keyboard controls
-        function setupControls() {
+        
+        // Update helicopter physics
+        function updateHelicopter() {
             // Keyboard controls
-            document.addEventListener('keydown', (e) => {
-                switch(e.key.toLowerCase()) {
-                    case 'arrowup':
-                    case 'w':
-                        controls.forward = true;
-                        break;
-                    case 'arrowdown':
-                    case 's':
-                        controls.backward = true;
-                        break;
-                    case 'arrowleft':
-                    case 'a':
-                        controls.left = true;
-                        break;
-                    case 'arrowright':
-                    case 'd':
-                        controls.right = true;
-                        break;
-                    case 'q':
-                        controls.up = true;
-                        break;
-                    case 'e':
-                        controls.down = true;
-                        break;
+            if (keys['w'] || keys['arrowup']) {
+                helicopter.vy -= helicopter.acceleration;
+            }
+            if (keys['s'] || keys['arrowdown']) {
+                helicopter.vy += helicopter.acceleration;
+            }
+            if (keys['a'] || keys['arrowleft']) {
+                helicopter.vx -= helicopter.acceleration;
+            }
+            if (keys['d'] || keys['arrowright']) {
+                helicopter.vx += helicopter.acceleration;
+            }
+            
+            // Apply boost
+            const speedMultiplier = helicopter.boosting ? 1.5 : 1;
+            
+            // Apply friction
+            helicopter.vx *= helicopter.friction;
+            helicopter.vy *= helicopter.friction;
+            
+            // Limit speed
+            const speed = Math.sqrt(helicopter.vx * helicopter.vx + helicopter.vy * helicopter.vy);
+            if (speed > helicopter.maxSpeed * speedMultiplier) {
+                helicopter.vx = (helicopter.vx / speed) * helicopter.maxSpeed * speedMultiplier;
+                helicopter.vy = (helicopter.vy / speed) * helicopter.maxSpeed * speedMultiplier;
+            }
+            helicopter.speed = speed;
+            
+            // Update position
+            helicopter.x += helicopter.vx;
+            helicopter.y += helicopter.vy;
+            
+            // Keep in bounds
+            helicopter.x = Math.max(helicopter.size, Math.min(canvas.width - helicopter.size, helicopter.x));
+            helicopter.y = Math.max(helicopter.size, Math.min(canvas.height - helicopter.size, helicopter.y));
+            
+            // Update angle based on velocity
+            if (speed > 0.1) {
+                helicopter.angle = Math.atan2(helicopter.vy, helicopter.vx);
+            }
+            
+            // Rotate rotor
+            helicopter.rotorAngle += 0.3 + speed * 0.05;
+            
+            // Update trail
+            if (speed > 0.5) {
+                helicopter.trail.push({
+                    x: helicopter.x,
+                    y: helicopter.y,
+                    alpha: 0.5
+                });
+            }
+            
+            // Limit and fade trail
+            if (helicopter.trail.length > 20) {
+                helicopter.trail.shift();
+            }
+            helicopter.trail.forEach(point => {
+                point.alpha *= 0.95;
+            });
+            
+            // Fuel consumption
+            if (helicopter.boosting && fuel > 0) {
+                fuel -= 0.3;
+            } else if (speed > 0.1 && fuel > 0) {
+                fuel -= 0.05;
+            }
+            fuel = Math.max(0, fuel);
+            
+            // Update fuel display
+            document.getElementById('fuelFill').style.width = fuel + '%';
+            
+            // Check POI proximity
+            checkPOIProximity();
+        }
+        
+        // Check if near POI
+        function checkPOIProximity() {
+            pois.forEach(poi => {
+                poi.canvasX = poi.x * canvas.width;
+                poi.canvasY = poi.y * canvas.height;
+                
+                const dx = helicopter.x - poi.canvasX;
+                const dy = helicopter.y - poi.canvasY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 40 && keys[' '] && !poi.visited) {
+                    visitPOI(poi);
                 }
             });
-
-            document.addEventListener('key
+        }
+        
+        // Visit POI
+        function visitPOI(poi) {
+            poi.visited = true;
+            visitedPOIs.add(poi.id);
+            score += 100;
+            fuel = Math.min(100, fuel + 20); // Refuel at POI
+            
+            // Update UI
+            document.getElementById('score').textContent = score;
+            document.getElementById('pois').textContent = visitedPOIs.size + '/16';
+            
+            // Show popup
+            const popup = document.getElementById('poiPopup');
+            document.getElementById('poiTitle').textContent = poi.icon + ' ' + poi.name;
+            document.getElementById('poiDescription').textContent = poi.description;
+            popup.style.left = Math.min(poi.canvasX, canvas.width - 320) + 'px';
+            popup.style.top = Math.max(20, poi.canvasY - 100) + 'px';
+            popup.classList.add('active');
+            
+            setTimeout(() => {
+                popup.classList.remove('active');
+            }, 3000);
+            
+            // Create particles
+            createParticles(poi.canvasX, poi.canvasY, 20);
+            
+            // Check achievements
+            checkAchievements();
+        }
+        
+        // Create particle effects
+        function createParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1,
+                    color: `hsl(${Math.random() * 60 + 30}, 100%, 50%)`
+                });
+            }
+        }
+        
+        // Update particles
+        function updateParticles() {
+            particles = particles.filter(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.1; // Gravity
+                particle.life -= 0.02;
+                particle.vx *= 0.98;
+                return particle.life > 0;
+            });
+        }
+        
+        // Check achievements
+        function checkAchievements() {
+            const visited = visitedPOIs.size;
+            
+            if (visited === 1 && !achievements.includes('first')) {
+                showAchievement('First Discovery!', 'You found your first location');
+                achievements.push('first');
+            }
+            
+            if (visited === 8 && !achievements.includes('halfway')) {
+                showAchievement('Halfway There!', 'You visited 8 locations');
+                achievements.push('halfway');
+                score += 250;
+            }
+            
+            if (visited === 16 && !achievements.includes('complete')) {
+                showAchievement('Master Explorer!', 'All 16 locations discovered!');
+                achievements.push('complete');
+                score += 1000;
+            }
+        }
+        
+        // Show achievement notification
+        function showAchievement(title, desc) {
+            const achievement = document.getElementById('achievement');
+            document.getElementById('achievementTitle').textContent = title;
+            document.getElementById('achievementDesc').textContent = desc;
+            achievement.classList.add('show');
+            
+            setTimeout(() => {
+                achievement.classList.remove('show');
+            }, 4000);
+        }
+        
+        // Draw functions
+        function drawBackground() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98D8C8');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Terrain pattern
+            ctx.fillStyle = 'rgba(34, 139, 34, 0.1)';
+            for (let i = 0; i < 10; i++) {
+                ctx.beginPath();
+                ctx.arc(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    Math.random() * 100 + 50,
+                    0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+        }
+        
+        function drawHelicopter() {
+            ctx.save();
+            
+            // Draw trail
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            helicopter.trail.forEach((point, index) => {
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(helicopter.x + 5, helicopter.y + 15, 20, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw helicopter body
+            ctx.translate(helicopter.x, helicopter.y);
+            ctx.rotate(helicopter.angle);
+            
+            // Body
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 20, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cockpit
+            ctx.fillStyle = '#3498db';
+            ctx.beginPath();
+            ctx.ellipse(8, 0, 10, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tail
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(-20, -2, 20, 4);
+            ctx.beginPath();
+            ctx.moveTo(-20, -8);
+            ctx.lineTo(-20, 8);
+            ctx.lineTo(-25, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Main rotor
+            ctx.save();
+            ctx.rotate(helicopter.rotorAngle);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-30, 0);
+            ctx.lineTo(30, 0);
+            ctx.moveTo(0, -30);
+            ctx.lineTo(0, 30);
+            ctx.stroke();
+            ctx.restore();
+            
+            ctx.restore();
+        }
+        
+        function drawPOIs() {
+            pois.forEach(poi => {
+                poi.canvasX = poi.x * canvas.width;
+                poi.canvasY = poi.y * canvas.height;
+                
+                const dx =
