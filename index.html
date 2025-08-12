@@ -21,7 +21,7 @@
             position: relative;
             height: 100vh;
         }
-       
+        
         #gameContainer {
             position: relative;
             width: 100%;
@@ -561,24 +561,24 @@
         let helicopterRotation = 0;
         let poiMarkers = [];
         
-        // POI data - spread across larger map
+        // POI data - massively spread across huge map
         const pois = [
-            { id: 1, x: -1600, z: -1600, name: "Stadt und Burg Ziesar", visited: false },
-            { id: 2, x: 1200, z: -1800, name: "Gutspark Dahlen", visited: false },
-            { id: 3, x: -800, z: -400, name: "Klein Briesener Bach", visited: false },
-            { id: 4, x: 800, z: -800, name: "Paradies Dippmannsdorf", visited: false },
-            { id: 5, x: -1800, z: 800, name: "Töpferort Görzke", visited: false },
-            { id: 6, x: 1600, z: 0, name: "Hagelberg", visited: false },
+            { id: 1, x: -6400, z: -6400, name: "Stadt und Burg Ziesar", visited: false },
+            { id: 2, x: 4800, z: -7200, name: "Gutspark Dahlen", visited: false },
+            { id: 3, x: -3200, z: -1600, name: "Klein Briesener Bach", visited: false },
+            { id: 4, x: 3200, z: -3200, name: "Paradies Dippmannsdorf", visited: false },
+            { id: 5, x: -7200, z: 3200, name: "Töpferort Görzke", visited: false },
+            { id: 6, x: 6400, z: 0, name: "Hagelberg", visited: false },
             { id: 7, x: 0, z: 0, name: "Bad Belzig", visited: false },
-            { id: 8, x: -1200, z: 1200, name: "Belziger Landschaftswiesen", visited: false },
-            { id: 9, x: 1000, z: 1000, name: "Wiesenburg", visited: false },
-            { id: 10, x: -400, z: 1600, name: "Naturparkzentrum", visited: false },
-            { id: 11, x: 1800, z: 1000, name: "Raben mit Burg", visited: false },
-            { id: 12, x: -2000, z: 1600, name: "Niemegk", visited: false },
-            { id: 13, x: 400, z: -1400, name: "Flämingbuchen", visited: false },
-            { id: 14, x: -1000, z: 400, name: "Brautrummel", visited: false },
-            { id: 15, x: 1400, z: 1400, name: "Neuendorfer Rummel", visited: false },
-            { id: 16, x: -200, z: 800, name: "Garrey", visited: false }
+            { id: 8, x: -4800, z: 4800, name: "Belziger Landschaftswiesen", visited: false },
+            { id: 9, x: 4000, z: 4000, name: "Wiesenburg", visited: false },
+            { id: 10, x: -1600, z: 6400, name: "Naturparkzentrum", visited: false },
+            { id: 11, x: 7200, z: 4000, name: "Raben mit Burg", visited: false },
+            { id: 12, x: -8000, z: 6400, name: "Niemegk", visited: false },
+            { id: 13, x: 1600, z: -5600, name: "Flämingbuchen", visited: false },
+            { id: 14, x: -4000, z: 1600, name: "Brautrummel", visited: false },
+            { id: 15, x: 5600, z: 5600, name: "Neuendorfer Rummel", visited: false },
+            { id: 16, x: -800, z: 3200, name: "Garrey", visited: false }
         ];
         
         // Controls
@@ -590,7 +590,7 @@
         function init3DGame() {
             // Scene setup
             scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x87CEEB, 200, 6000);
+            scene.fog = new THREE.Fog(0x87CEEB, 500, 24000);
             
             // Camera - positioned behind helicopter initially
             camera = new THREE.PerspectiveCamera(
@@ -619,8 +619,8 @@
             directionalLight.castShadow = true;
             scene.add(directionalLight);
             
-            // Sky - larger to match map
-            const skyGeometry = new THREE.SphereGeometry(6000, 32, 32);
+            // Sky - massive dome for huge map
+            const skyGeometry = new THREE.SphereGeometry(24000, 32, 32);
             const skyMaterial = new THREE.MeshBasicMaterial({
                 color: 0x87CEEB,
                 side: THREE.BackSide
@@ -628,13 +628,12 @@
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
             
-            // Terrain with map texture - 4x larger
-            const terrainGeometry = new THREE.PlaneGeometry(6000, 6000, 60, 60);
+            // Terrain with map texture - 16x larger than original (4x4)
+            const terrainGeometry = new THREE.PlaneGeometry(24000, 24000, 100, 100);
             
             // Load map texture
             const textureLoader = new THREE.TextureLoader();
             
             // Try to load map from GitHub repository
             // Using a publicly available map of the Hoher Fläming region
-            const mapTexture = textureLoader.load(
-      
+       
