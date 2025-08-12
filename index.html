@@ -561,24 +561,24 @@
         let helicopterRotation = 0;
         let poiMarkers = [];
         
-        // POI data
+        // POI data - spread across larger map
         const pois = [
-            { id: 1, x: -400, z: -400, name: "Stadt und Burg Ziesar", visited: false },
-            { id: 2, x: 300, z: -450, name: "Gutspark Dahlen", visited: false },
-            { id: 3, x: -200, z: -100, name: "Klein Briesener Bach", visited: false },
-            { id: 4, x: 200, z: -200, name: "Paradies Dippmannsdorf", visited: false },
-            { id: 5, x: -450, z: 200, name: "Töpferort Görzke", visited: false },
-            { id: 6, x: 400, z: 0, name: "Hagelberg", visited: false },
+            { id: 1, x: -1600, z: -1600, name: "Stadt und Burg Ziesar", visited: false },
+            { id: 2, x: 1200, z: -1800, name: "Gutspark Dahlen", visited: false },
+            { id: 3, x: -800, z: -400, name: "Klein Briesener Bach", visited: false },
+            { id: 4, x: 800, z: -800, name: "Paradies Dippmannsdorf", visited: false },
+            { id: 5, x: -1800, z: 800, name: "Töpferort Görzke", visited: false },
+            { id: 6, x: 1600, z: 0, name: "Hagelberg", visited: false },
             { id: 7, x: 0, z: 0, name: "Bad Belzig", visited: false },
-            { id: 8, x: -300, z: 300, name: "Belziger Landschaftswiesen", visited: false },
-            { id: 9, x: 250, z: 250, name: "Wiesenburg", visited: false },
-            { id: 10, x: -100, z: 400, name: "Naturparkzentrum", visited: false },
-            { id: 11, x: 450, z: 250, name: "Raben mit Burg", visited: false },
-            { id: 12, x: -500, z: 400, name: "Niemegk", visited: false },
-            { id: 13, x: 100, z: -350, name: "Flämingbuchen", visited: false },
-            { id: 14, x: -250, z: 100, name: "Brautrummel", visited: false },
-            { id: 15, x: 350, z: 350, name: "Neuendorfer Rummel", visited: false },
-            { id: 16, x: -50, z: 200, name: "Garrey", visited: false }
+            { id: 8, x: -1200, z: 1200, name: "Belziger Landschaftswiesen", visited: false },
+            { id: 9, x: 1000, z: 1000, name: "Wiesenburg", visited: false },
+            { id: 10, x: -400, z: 1600, name: "Naturparkzentrum", visited: false },
+            { id: 11, x: 1800, z: 1000, name: "Raben mit Burg", visited: false },
+            { id: 12, x: -2000, z: 1600, name: "Niemegk", visited: false },
+            { id: 13, x: 400, z: -1400, name: "Flämingbuchen", visited: false },
+            { id: 14, x: -1000, z: 400, name: "Brautrummel", visited: false },
+            { id: 15, x: 1400, z: 1400, name: "Neuendorfer Rummel", visited: false },
+            { id: 16, x: -200, z: 800, name: "Garrey", visited: false }
         ];
         
         // Controls
@@ -590,7 +590,7 @@
         function init3DGame() {
             // Scene setup
             scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x87CEEB, 100, 1500);
+            scene.fog = new THREE.Fog(0x87CEEB, 200, 6000);
             
             // Camera - positioned behind helicopter initially
             camera = new THREE.PerspectiveCamera(
@@ -619,8 +619,8 @@
             directionalLight.castShadow = true;
             scene.add(directionalLight);
             
-            // Sky
-            const skyGeometry = new THREE.SphereGeometry(1500, 32, 32);
+            // Sky - larger to match map
+            const skyGeometry = new THREE.SphereGeometry(6000, 32, 32);
             const skyMaterial = new THREE.MeshBasicMaterial({
                 color: 0x87CEEB,
                 side: THREE.BackSide
@@ -628,16 +628,102 @@
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
             
-            // Terrain
-            const terrainGeometry = new THREE.PlaneGeometry(1500, 1500, 30, 30);
+            // Terrain with map texture - 4x larger
+            const terrainGeometry = new THREE.PlaneGeometry(6000, 6000, 60, 60);
+            
+            // Load map texture
+            const textureLoader = new THREE.TextureLoader();
+            
+            // Try to load map from GitHub repository
+            // Using a publicly available map of the Hoher Fläming region
+            const mapTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/Mikieb1982/Hoher-Flaeming-Helicopter-Ride/main/map.jpg',
+                // Success callback
+                function(texture) {
+                    console.log('Map texture loaded successfully');
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(2, 2); // Repeat texture for larger area
+                },
+                // Progress callback
+                undefined,
+                // Error callback - use fallback texture
+                function(error) {
+                    console.log('Map texture failed to load, using procedural terrain');
+                    // Create a canvas texture as fallback
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1024;
+                    canvas.height = 1024;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Create a topographic style map
+                    const gradient = ctx.createRadialGradient(512, 512, 0, 512, 512, 512);
+                    gradient.addColorStop(0, '#4a5f3a');
+                    gradient.addColorStop(0.3, '#5a7a4a');
+                    gradient.addColorStop(0.6, '#3a5f3a');
+                    gradient.addColorStop(1, '#2a4f2a');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, 1024, 1024);
+                    
+                    // Add some terrain features
+                    ctx.strokeStyle = 'rgba(139, 119, 101, 0.3)';
+                    ctx.lineWidth = 3;
+                    
+                    // Draw roads
+                    ctx.beginPath();
+                    ctx.moveTo(0, 512);
+                    ctx.quadraticCurveTo(256, 400, 512, 512);
+                    ctx.quadraticCurveTo(768, 624, 1024, 512);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(512, 0);
+                    ctx.quadraticCurveTo(400, 256, 512, 512);
+                    ctx.quadraticCurveTo(624, 768, 512, 1024);
+                    ctx.stroke();
+                    
+                    // Add forest patches
+                    for (let i = 0; i < 50; i++) {
+                        ctx.fillStyle = `rgba(34, 139, 34, ${Math.random() * 0.3 + 0.1})`;
+                        ctx.beginPath();
+                        ctx.arc(
+                            Math.random() * 1024,
+                            Math.random() * 1024,
+                            Math.random() * 60 + 20,
+                            0, Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                    
+                    // Add settlement markers
+                    ctx.fillStyle = 'rgba(139, 69, 19, 0.4)';
+                    for (let i = 0; i < 16; i++) {
+                        ctx.fillRect(
+                            Math.random() * 984 + 20,
+                            Math.random() * 984 + 20,
+                            Math.random() * 20 + 10,
+                            Math.random() * 20 + 10
+                        );
+                    }
+                    
+                    const fallbackTexture = new THREE.CanvasTexture(canvas);
+                    fallbackTexture.wrapS = THREE.RepeatWrapping;
+                    fallbackTexture.wrapT = THREE.RepeatWrapping;
+                    fallbackTexture.repeat.set(2, 2);
+                    terrainMaterial.map = fallbackTexture;
+                    terrainMaterial.needsUpdate = true;
+                }
+            );
+            
             const terrainMaterial = new THREE.MeshLambertMaterial({
-                color: 0x3a5f3a
+                map: mapTexture,
+                side: THREE.DoubleSide
             });
             
-            // Add terrain variation
+            // Add slight terrain variation for 3D effect
             const vertices = terrainGeometry.attributes.position.array;
             for (let i = 0; i < vertices.length; i += 3) {
-                vertices[i + 2] = Math.sin(vertices[i] * 0.01) * 5 + Math.cos(vertices[i + 1] * 0.01) * 5;
+                vertices[i + 2] = Math.sin(vertices[i] * 0.005) * 8 + Math.cos(vertices[i + 1] * 0.005) * 8;
             }
             terrainGeometry.computeVertexNormals();
             
@@ -646,8 +732,8 @@
             terrain.receiveShadow = true;
             scene.add(terrain);
             
-            // Trees
-            for (let i = 0; i < 50; i++) {
+            // Trees - spread across larger area
+            for (let i = 0; i < 200; i++) {
                 const treeGroup = new THREE.Group();
                 
                 const trunkGeometry = new THREE.CylinderGeometry(1, 2, 10);
@@ -664,8 +750,8 @@
                 leaves.castShadow = true;
                 treeGroup.add(leaves);
                 
-                treeGroup.position.x = (Math.random() - 0.5) * 1400;
-                treeGroup.position.z = (Math.random() - 0.5) * 1400;
+                treeGroup.position.x = (Math.random() - 0.5) * 5600;
+                treeGroup.position.z = (Math.random() - 0.5) * 5600;
                 scene.add(treeGroup);
             }
             
@@ -885,9 +971,9 @@
             helicopter.position.x += helicopterVelocity.x;
             helicopter.position.z += helicopterVelocity.z;
             
-            // Boundary limits
-            helicopter.position.x = Math.max(-700, Math.min(700, helicopter.position.x));
-            helicopter.position.z = Math.max(-700, Math.min(700, helicopter.position.z));
+            // Boundary limits - expanded for larger map
+            helicopter.position.x = Math.max(-2800, Math.min(2800, helicopter.position.x));
+            helicopter.position.z = Math.max(-2800, Math.min(2800, helicopter.position.z));
             
             // FIXED: Proper nose-first orientation
             if (helicopterVelocity.length() > 0.1) {
@@ -1045,10 +1131,10 @@
             radarCtx.lineTo(centerX, 120);
             radarCtx.stroke();
             
-            // POI blips
+            // POI blips - adjusted scale for larger map
             pois.forEach(poi => {
-                const relX = (poi.x / 1400) * 100;
-                const relZ = (poi.z / 1400) * 100;
+                const relX = (poi.x / 5600) * 100;
+                const relZ = (poi.z / 5600) * 100;
                 
                 radarCtx.fillStyle = poi.visited ? '#00ff00' : '#ffff00';
                 radarCtx.beginPath();
@@ -1056,9 +1142,9 @@
                 radarCtx.fill();
             });
             
-            // Helicopter
-            const heliX = (helicopter.position.x / 1400) * 100;
-            const heliZ = (helicopter.position.z / 1400) * 100;
+            // Helicopter - adjusted scale for larger map
+            const heliX = (helicopter.position.x / 5600) * 100;
+            const heliZ = (helicopter.position.z / 5600) * 100;
             
             radarCtx.fillStyle = '#ff0000';
             radarCtx.beginPath();
