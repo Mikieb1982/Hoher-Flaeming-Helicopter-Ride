@@ -592,14 +592,14 @@
             scene = new THREE.Scene();
             scene.fog = new THREE.Fog(0x87CEEB, 100, 1500);
             
-            // Camera
+            // Camera - positioned behind helicopter initially
             camera = new THREE.PerspectiveCamera(
                 75,
                 window.innerWidth / window.innerHeight,
                 0.1,
                 2000
             );
-            camera.position.set(0, 100, 150);
+            camera.position.set(0, 100, -150); // Behind and above the helicopter
             
             // Renderer
             renderer = new THREE.WebGLRenderer({
@@ -672,7 +672,7 @@
             // Create helicopter
             helicopter = new THREE.Group();
             
-            // Body
+            // Body (center)
             const bodyGeometry = new THREE.SphereGeometry(6, 8, 6);
             const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a2e });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
@@ -680,22 +680,29 @@
             body.castShadow = true;
             helicopter.add(body);
             
-            // Cockpit (positioned at front)
+            // Cockpit (FRONT - along positive Z axis for forward flight)
             const cockpitGeometry = new THREE.SphereGeometry(4, 6, 6);
             const cockpitMaterial = new THREE.MeshPhongMaterial({ color: 0x4494ff });
             const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-            cockpit.position.set(6, 0, 0); // Front of helicopter
-            cockpit.scale.set(1.2, 0.8, 1);
+            cockpit.position.set(0, 0, 6); // Position cockpit at front (positive Z)
+            cockpit.scale.set(1, 0.8, 1.2);
             helicopter.add(cockpit);
             
-            // Tail
+            // Tail (BACK - along negative Z axis)
             const tailGeometry = new THREE.CylinderGeometry(2, 1, 20);
             const tailMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a2e });
             const tail = new THREE.Mesh(tailGeometry, tailMaterial);
-            tail.position.set(-12, 0, 0); // Back of helicopter
-            tail.rotation.z = Math.PI / 2;
+            tail.position.set(0, 0, -12); // Position tail at back (negative Z)
+            tail.rotation.x = Math.PI / 2; // Rotate to align with Z axis
             tail.castShadow = true;
             helicopter.add(tail);
+            
+            // Tail fin (vertical stabilizer)
+            const finGeometry = new THREE.BoxGeometry(0.5, 6, 4);
+            const finMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a2e });
+            const fin = new THREE.Mesh(finGeometry, finMaterial);
+            fin.position.set(0, 3, -18);
+            helicopter.add(fin);
             
             // Main Rotor
             rotorGroup = new THREE.Group();
@@ -707,6 +714,26 @@
             rotorGroup.add(rotor1, rotor2);
             rotorGroup.position.y = 6;
             helicopter.add(rotorGroup);
+            
+            // Tail rotor
+            const tailRotorGeometry = new THREE.BoxGeometry(8, 8, 0.3);
+            const tailRotorMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const tailRotor = new THREE.Mesh(tailRotorGeometry, tailRotorMaterial);
+            tailRotor.position.set(0.5, 3, -18);
+            helicopter.add(tailRotor);
+            
+            // Landing skids
+            const skidGeometry = new THREE.CylinderGeometry(0.3, 0.3, 20);
+            const skidMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const skid1 = new THREE.Mesh(skidGeometry, skidMaterial);
+            skid1.position.set(-3, -5, 0);
+            skid1.rotation.x = Math.PI / 2;
+            helicopter.add(skid1);
+            
+            const skid2 = new THREE.Mesh(skidGeometry, skidMaterial);
+            skid2.position.set(3, -5, 0);
+            skid2.rotation.x = Math.PI / 2;
+            helicopter.add(skid2);
             
             helicopter.position.y = 40;
             scene.add(helicopter);
@@ -829,4 +856,276 @@
         function updateHelicopter(deltaTime) {
             // Input
             let inputX = 0;
-            let input
+            let inputZ = 0;
+            
+            if (keys['w'] || keys['arrowup']) inputZ -= 1;
+            if (keys['s'] || keys['arrowdown']) inputZ += 1;
+            if (keys['a'] || keys['arrowleft']) inputX -= 1;
+            if (keys['d'] || keys['arrowright']) inputX += 1;
+            
+            // Add joystick input
+            inputX += joystickVector.x;
+            inputZ -= joystickVector.y;
+            
+            // Apply acceleration
+            const acceleration = (keys['shift'] || mobileBoost) ? 0.6 : 0.3;
+            helicopterVelocity.x += inputX * acceleration;
+            helicopterVelocity.z += inputZ * acceleration;
+            
+            // Apply friction
+            helicopterVelocity.multiplyScalar(0.94);
+            
+            // Limit speed
+            const maxSpeed = (keys['shift'] || mobileBoost) ? 2.5 : 1.5;
+            if (helicopterVelocity.length() > maxSpeed) {
+                helicopterVelocity.normalize().multiplyScalar(maxSpeed);
+            }
+            
+            // Update position
+            helicopter.position.x += helicopterVelocity.x;
+            helicopter.position.z += helicopterVelocity.z;
+            
+            // Boundary limits
+            helicopter.position.x = Math.max(-700, Math.min(700, helicopter.position.x));
+            helicopter.position.z = Math.max(-700, Math.min(700, helicopter.position.z));
+            
+            // FIXED: Proper nose-first orientation
+            if (helicopterVelocity.length() > 0.1) {
+                // Calculate target rotation based on velocity direction
+                // Using atan2 with X and Z to get the heading
+                const targetRotation = Math.atan2(helicopterVelocity.x, helicopterVelocity.z);
+                
+                // Smooth rotation with proper angle wrapping
+                let rotationDiff = targetRotation - helicopterRotation;
+                while (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2;
+                while (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2;
+                
+                // Interpolate rotation
+                helicopterRotation += rotationDiff * 0.15;
+                
+                // Apply rotation - no offset needed as cockpit is on +Z axis
+                helicopter.rotation.y = helicopterRotation;
+            }
+            
+            // Banking and pitch for realistic flight
+            helicopter.rotation.z = helicopterVelocity.x * 0.1;  // Bank into turns
+            helicopter.rotation.x = helicopterVelocity.z * 0.05; // Slight forward tilt when moving
+            
+            // Rotate rotors
+            rotorGroup.rotation.y += 0.4;
+            
+            // Camera follow - positioned BEHIND the helicopter
+            const cameraOffset = new THREE.Vector3(0, 80, -120); // Negative Z to be behind
+            cameraOffset.applyQuaternion(helicopter.quaternion);
+            camera.position.lerp(helicopter.position.clone().add(cameraOffset), 0.08);
+            
+            // Look slightly ahead of the helicopter
+            const lookTarget = helicopter.position.clone();
+            lookTarget.z += 20; // Look a bit forward
+            camera.lookAt(lookTarget);
+            
+            // Check POI proximity
+            poiMarkers.forEach(marker => {
+                const distance = helicopter.position.distanceTo(marker.position);
+                
+                if (distance < 40) {
+                    marker.scale.setScalar(1 + Math.sin(Date.now() * 0.008) * 0.15);
+                    
+                    if ((keys[' '] || mobileLand) && !marker.userData.visited) {
+                        visitPOI(marker);
+                    }
+                } else {
+                    marker.scale.setScalar(1);
+                }
+            });
+            
+            // Fuel consumption
+            const fuelConsumption = (keys['shift'] || mobileBoost) ? 0.25 : 0.08;
+            fuel = Math.max(0, fuel - fuelConsumption * deltaTime);
+            document.getElementById('fuelFill').style.width = fuel + '%';
+            
+            // Warning system
+            const warningOverlay = document.getElementById('warningOverlay');
+            if (fuel < 20) {
+                warningOverlay.classList.add('active');
+            } else {
+                warningOverlay.classList.remove('active');
+            }
+            
+            // Update gauges
+            const speed = helicopterVelocity.length();
+            const speedPercent = (speed / maxSpeed) * 100;
+            
+            // Speed gauge
+            const speedNeedle = document.getElementById('speedNeedle');
+            if (speedNeedle) {
+                const speedAngle = -90 + (speedPercent * 1.8);
+                speedNeedle.style.transform = `translateX(-50%) rotate(${speedAngle}deg)`;
+                document.getElementById('speedValue').textContent = Math.round(speed * 40);
+            }
+            
+            // Altitude gauge
+            const altNeedle = document.getElementById('altNeedle');
+            if (altNeedle) {
+                const altPercent = ((helicopter.position.y - 20) / 80) * 100;
+                const altAngle = -90 + (altPercent * 1.8);
+                altNeedle.style.transform = `translateX(-50%) rotate(${altAngle}deg)`;
+                document.getElementById('altValue').textContent = Math.round(helicopter.position.y * 2);
+            }
+        }
+        
+        function visitPOI(marker) {
+            const poi = marker.userData;
+            poi.visited = true;
+            visitedPOIs.add(poi.id);
+            score += 100;
+            fuel = Math.min(100, fuel + 25);
+            
+            // Update marker color
+            marker.children.forEach(child => {
+                if (child.material) {
+                    child.material.color.setHex(0x00ff00);
+                }
+            });
+            
+            // Update UI
+            document.getElementById('score').textContent = score.toString().padStart(4, '0');
+            document.getElementById('pois').textContent = 
+                `${visitedPOIs.size.toString().padStart(2, '0')}/16`;
+            
+            // Achievements
+            if (visitedPOIs.size === 1) {
+                showAchievement('First Target!', 'Mission started');
+            } else if (visitedPOIs.size === 8) {
+                showAchievement('Halfway!', '8 targets down');
+            } else if (visitedPOIs.size === 16) {
+                showAchievement('Mission Complete!', 'All targets destroyed');
+                score += 1000;
+            }
+        }
+        
+        function showAchievement(title, desc) {
+            const achievement = document.getElementById('achievement');
+            document.getElementById('achievementTitle').textContent = title;
+            document.getElementById('achievementDesc').textContent = desc;
+            achievement.classList.add('show');
+            
+            setTimeout(() => {
+                achievement.classList.remove('show');
+            }, 3500);
+        }
+        
+        function updateRadar() {
+            const radarCanvas = document.getElementById('radarCanvas');
+            const radarCtx = radarCanvas.getContext('2d');
+            radarCanvas.width = 120;
+            radarCanvas.height = 120;
+            
+            const centerX = 60;
+            const centerY = 60;
+            
+            // Phosphor fade effect
+            radarCtx.fillStyle = 'rgba(0, 10, 0, 0.2)';
+            radarCtx.fillRect(0, 0, 120, 120);
+            
+            // Range rings
+            radarCtx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
+            radarCtx.lineWidth = 1;
+            for (let i = 1; i <= 2; i++) {
+                radarCtx.beginPath();
+                radarCtx.arc(centerX, centerY, i * 25, 0, Math.PI * 2);
+                radarCtx.stroke();
+            }
+            
+            // Crosshairs
+            radarCtx.beginPath();
+            radarCtx.moveTo(0, centerY);
+            radarCtx.lineTo(120, centerY);
+            radarCtx.moveTo(centerX, 0);
+            radarCtx.lineTo(centerX, 120);
+            radarCtx.stroke();
+            
+            // POI blips
+            pois.forEach(poi => {
+                const relX = (poi.x / 1400) * 100;
+                const relZ = (poi.z / 1400) * 100;
+                
+                radarCtx.fillStyle = poi.visited ? '#00ff00' : '#ffff00';
+                radarCtx.beginPath();
+                radarCtx.arc(centerX + relX, centerY + relZ, 2, 0, Math.PI * 2);
+                radarCtx.fill();
+            });
+            
+            // Helicopter
+            const heliX = (helicopter.position.x / 1400) * 100;
+            const heliZ = (helicopter.position.z / 1400) * 100;
+            
+            radarCtx.fillStyle = '#ff0000';
+            radarCtx.beginPath();
+            radarCtx.arc(centerX + heliX, centerY + heliZ, 3, 0, Math.PI * 2);
+            radarCtx.fill();
+            
+            // Direction line
+            radarCtx.strokeStyle = '#ff0000';
+            radarCtx.lineWidth = 1;
+            radarCtx.beginPath();
+            radarCtx.moveTo(centerX + heliX, centerY + heliZ);
+            radarCtx.lineTo(
+                centerX + heliX + Math.cos(helicopterRotation) * 8,
+                centerY + heliZ + Math.sin(helicopterRotation) * 8
+            );
+            radarCtx.stroke();
+        }
+        
+        function updateUI() {
+            if (gameRunning) {
+                const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('time').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        // Animation loop
+        let lastTime = 0;
+        function animate(currentTime = 0) {
+            if (!gameRunning) return;
+            
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            updateHelicopter(deltaTime || 0.016);
+            updateRadar();
+            updateUI();
+            
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof THREE !== 'undefined') {
+                init3DGame();
+            } else {
+                console.error('Three.js failed to load');
+                // Show error message
+                document.getElementById('startScreen').innerHTML = `
+                    <h1 class="game-logo">ERROR</h1>
+                    <p class="game-subtitle">Failed to load 3D engine</p>
+                    <button class="start-button" onclick="location.reload()">RETRY</button>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
