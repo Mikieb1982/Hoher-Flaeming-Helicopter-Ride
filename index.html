@@ -733,6 +733,14 @@
             </div>
         </div>
         
+        <!-- Altitude Controls -->
+        <div class="altitude-controls">
+            <button class="altitude-btn up" id="altUpBtn" data-label="ALT">▲</button>
+            <button class="altitude-btn down" id="altDownBtn" data-label="">▼</button>
+        </div>
+        
+        <div class="altitude-display" id="altitudeDisplay">ALT: 40m</div>
+        
         <div class="mobile-buttons">
             <button class="mobile-btn" id="boostBtn">
                 <span class="mobile-btn-icon">⚡</span>
@@ -798,6 +806,8 @@
         let joystickVector = { x: 0, y: 0 };
         let mobileBoost = false;
         let mobileLand = false;
+        let mobileAltUp = false;
+        let mobileAltDown = false;
         
         function init3DGame() {
             // Scene setup
@@ -1235,6 +1245,50 @@
                 setTimeout(() => { mobileLand = false; }, 100);
             });
             
+            // Altitude control buttons
+            const altUpBtn = document.getElementById('altUpBtn');
+            const altDownBtn = document.getElementById('altDownBtn');
+            
+            if (altUpBtn) {
+                altUpBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    mobileAltUp = true;
+                });
+                
+                altUpBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    mobileAltUp = false;
+                });
+                
+                altUpBtn.addEventListener('mousedown', () => {
+                    mobileAltUp = true;
+                });
+                
+                altUpBtn.addEventListener('mouseup', () => {
+                    mobileAltUp = false;
+                });
+            }
+            
+            if (altDownBtn) {
+                altDownBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    mobileAltDown = true;
+                });
+                
+                altDownBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    mobileAltDown = false;
+                });
+                
+                altDownBtn.addEventListener('mousedown', () => {
+                    mobileAltDown = true;
+                });
+                
+                altDownBtn.addEventListener('mouseup', () => {
+                    mobileAltDown = false;
+                });
+            }
+            
             // Start button
             document.getElementById('startBtn').addEventListener('click', startGame);
         }
@@ -1247,28 +1301,52 @@
         }
         
         function updateHelicopter(deltaTime) {
-            // Input
-            let inputX = 0;
-            let inputZ = 0;
+            // Get input from keyboard or joystick
+            let inputForward = 0;
+            let inputTurn = 0;
+            let inputAltitude = 0;
             
-            if (keys['w'] || keys['arrowup']) inputZ -= 1;
-            if (keys['s'] || keys['arrowdown']) inputZ += 1;
-            if (keys['a'] || keys['arrowleft']) inputX -= 1;
-            if (keys['d'] || keys['arrowright']) inputX += 1;
+            // Keyboard controls - tank-style (forward/back + turn)
+            if (keys['w'] || keys['arrowup']) inputForward += 1;
+            if (keys['s'] || keys['arrowdown']) inputForward -= 1;
+            if (keys['a'] || keys['arrowleft']) inputTurn -= 1;
+            if (keys['d'] || keys['arrowright']) inputTurn += 1;
+            if (keys['q'] || keys['pageup']) inputAltitude += 1;
+            if (keys['e'] || keys['pagedown']) inputAltitude -= 1;
             
-            // Add joystick input
-            inputX += joystickVector.x;
-            inputZ -= joystickVector.y;
+            // Joystick controls - relative to helicopter facing
+            // Y-axis controls forward/backward movement
+            // X-axis controls turning
+            inputForward += joystickVector.y; // Push up = forward
+            inputTurn += joystickVector.x;     // Push right = turn right
             
-            // Apply acceleration - increased for huge distances
-            const acceleration = (keys['shift'] || mobileBoost) ? 1.2 : 0.6;
-            helicopterVelocity.x += inputX * acceleration;
-            helicopterVelocity.z += inputZ * acceleration;
+            // Mobile altitude buttons
+            if (mobileAltUp) inputAltitude += 1;
+            if (mobileAltDown) inputAltitude -= 1;
+            
+            // Apply turning
+            if (Math.abs(inputTurn) > 0.1) {
+                helicopterRotation += inputTurn * 0.05;
+            }
+            
+            // Update helicopter rotation immediately for responsive turning
+            helicopter.rotation.y = helicopterRotation + Math.PI / 2;
+            
+            // Calculate movement based on helicopter's current facing direction
+            const moveSpeed = (keys['shift'] || mobileBoost) ? 1.2 : 0.6;
+            
+            // Convert forward/back input to world space based on helicopter rotation
+            const forwardX = Math.cos(helicopterRotation) * inputForward * moveSpeed;
+            const forwardZ = Math.sin(helicopterRotation) * inputForward * moveSpeed;
+            
+            // Apply movement in the direction the helicopter is facing
+            helicopterVelocity.x += forwardX;
+            helicopterVelocity.z += forwardZ;
             
             // Apply friction
-            helicopterVelocity.multiplyScalar(0.96);
+            helicopterVelocity.multiplyScalar(0.94);
             
-            // Limit speed - much faster for huge map
+            // Limit speed
             const maxSpeed = (keys['shift'] || mobileBoost) ? 8 : 4;
             if (helicopterVelocity.length() > maxSpeed) {
                 helicopterVelocity.normalize().multiplyScalar(maxSpeed);
@@ -1278,50 +1356,49 @@
             helicopter.position.x += helicopterVelocity.x;
             helicopter.position.z += helicopterVelocity.z;
             
+            // Altitude control
+            if (inputAltitude !== 0) {
+                const altSpeed = 2;
+                helicopter.position.y += inputAltitude * altSpeed;
+                helicopter.position.y = Math.max(20, Math.min(300, helicopter.position.y));
+            }
+            
+            // Update altitude display for mobile
+            const altDisplay = document.getElementById('altitudeDisplay');
+            if (altDisplay) {
+                altDisplay.textContent = `ALT: ${Math.round(helicopter.position.y)}m`;
+            }
+            
             // Boundary limits - massive map boundaries
             helicopter.position.x = Math.max(-11000, Math.min(11000, helicopter.position.x));
             helicopter.position.z = Math.max(-11000, Math.min(11000, helicopter.position.z));
             
-            // FIXED: Proper nose-first orientation
-            if (helicopterVelocity.length() > 0.1) {
-                // Calculate target rotation based on velocity direction
-                // Using atan2 with X and Z to get the heading
-                const targetRotation = Math.atan2(helicopterVelocity.x, helicopterVelocity.z);
-                
-                // Smooth rotation with proper angle wrapping
-                let rotationDiff = targetRotation - helicopterRotation;
-                while (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2;
-                while (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2;
-                
-                // Interpolate rotation
-                helicopterRotation += rotationDiff * 0.15;
-                
-                // Apply rotation - no offset needed as cockpit is on +Z axis
-                helicopter.rotation.y = helicopterRotation;
-            }
-            
-            // Banking and pitch for realistic flight
-            helicopter.rotation.z = helicopterVelocity.x * 0.1;  // Bank into turns
-            helicopter.rotation.x = helicopterVelocity.z * 0.05; // Slight forward tilt when moving
+            // Banking and pitch based on movement
+            const speed = helicopterVelocity.length();
+            helicopter.rotation.z = inputTurn * 0.2; // Bank when turning
+            helicopter.rotation.x = (inputForward * 0.1) - (speed * 0.02); // Pitch forward when moving
             
             // Rotate rotors
             rotorGroup.rotation.y += 0.4;
             
-            // Camera follow - positioned BEHIND the helicopter
-            const cameraOffset = new THREE.Vector3(0, 80, -120); // Negative Z to be behind
-            cameraOffset.applyQuaternion(helicopter.quaternion);
-            camera.position.lerp(helicopter.position.clone().add(cameraOffset), 0.08);
+            // Camera follow - behind and above helicopter
+            const cameraDistance = 200 + (speed * 10); // Dynamic distance based on speed
+            const cameraHeight = 100 + helicopter.position.y * 0.5;
             
-            // Look slightly ahead of the helicopter
-            const lookTarget = helicopter.position.clone();
-            lookTarget.z += 20; // Look a bit forward
-            camera.lookAt(lookTarget);
+            const cameraOffset = new THREE.Vector3(
+                -Math.cos(helicopterRotation) * cameraDistance,
+                cameraHeight,
+                -Math.sin(helicopterRotation) * cameraDistance
+            );
+            
+            camera.position.lerp(helicopter.position.clone().add(cameraOffset), 0.08);
+            camera.lookAt(helicopter.position);
             
             // Check POI proximity - larger detection radius for huge map
             poiMarkers.forEach(marker => {
                 const distance = helicopter.position.distanceTo(marker.position);
                 
-                if (distance < 100) {
+                if (distance < 100 + helicopter.position.y * 0.5) { // Larger radius at higher altitude
                     marker.scale.setScalar(1 + Math.sin(Date.now() * 0.008) * 0.15);
                     
                     if ((keys[' '] || mobileLand) && !marker.userData.visited) {
@@ -1346,7 +1423,6 @@
             }
             
             // Update gauges
-            const speed = helicopterVelocity.length();
             const speedPercent = (speed / maxSpeed) * 100;
             
             // Speed gauge
@@ -1360,10 +1436,10 @@
             // Altitude gauge
             const altNeedle = document.getElementById('altNeedle');
             if (altNeedle) {
-                const altPercent = ((helicopter.position.y - 20) / 80) * 100;
+                const altPercent = ((helicopter.position.y - 20) / 280) * 100;
                 const altAngle = -90 + (altPercent * 1.8);
                 altNeedle.style.transform = `translateX(-50%) rotate(${altAngle}deg)`;
-                document.getElementById('altValue').textContent = Math.round(helicopter.position.y * 2);
+                document.getElementById('altValue').textContent = Math.round(helicopter.position.y);
             }
         }
         
