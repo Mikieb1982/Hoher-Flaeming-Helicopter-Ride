@@ -342,7 +342,7 @@
             color: rgba(255,165,0,0.8);
         }
         
-        /* Mobile Controls */
+        /* Mobile Controls - Enhanced Joystick */
         .mobile-controls {
             position: fixed;
             bottom: 20px;
@@ -352,27 +352,228 @@
         }
         
         .joystick-base {
-            width: 120px;
-            height: 120px;
-            background: radial-gradient(circle, 
-                rgba(60,60,40,0.7) 0%, 
-                rgba(20,20,15,0.7) 100%);
-            border: 2px solid #6B4423;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(139,69,19,0.8) 0%, 
+                rgba(60,40,20,0.9) 50%,
+                rgba(20,15,10,0.95) 100%);
+            border: 4px solid #8B4513;
             border-radius: 50%;
             position: relative;
+            box-shadow: 
+                inset 0 0 30px rgba(0,0,0,0.7),
+                inset 0 -5px 15px rgba(0,0,0,0.8),
+                0 5px 20px rgba(0,0,0,0.5),
+                0 0 40px rgba(255,165,0,0.2);
+            overflow: visible;
+        }
+        
+        .joystick-base::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,165,0,0.2);
+            pointer-events: none;
+        }
+        
+        .joystick-base::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+            background: repeating-conic-gradient(
+                from 0deg at 50% 50%,
+                transparent 0deg,
+                transparent 8deg,
+                rgba(255,165,0,0.1) 8deg,
+                rgba(255,165,0,0.1) 10deg
+            );
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        /* Direction indicators */
+        .joystick-directions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .joystick-direction {
+            position: absolute;
+            color: rgba(255,165,0,0.4);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .joystick-direction.north {
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .joystick-direction.south {
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .joystick-direction.east {
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .joystick-direction.west {
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Center dead zone indicator */
+        .joystick-deadzone {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            transform: translate(-50%, -50%);
+            border: 1px dashed rgba(255,165,0,0.2);
+            border-radius: 50%;
+            pointer-events: none;
         }
         
         .joystick-knob {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #8B4513 0%, #6B4423 100%);
-            border: 2px solid #FFA500;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle at 35% 35%, 
+                #FFA500 0%, 
+                #8B4513 50%,
+                #654321 100%);
+            border: 3px solid #FFD700;
             border-radius: 50%;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
+            box-shadow: 
+                inset 0 -3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 8px rgba(255,255,255,0.3),
+                0 5px 15px rgba(0,0,0,0.5),
+                0 0 25px rgba(255,165,0,0.4);
+            transition: box-shadow 0.2s ease;
+        }
+        
+        .joystick-knob.active {
+            box-shadow: 
+                inset 0 -3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 8px rgba(255,255,255,0.3),
+                0 2px 10px rgba(0,0,0,0.5),
+                0 0 40px rgba(255,165,0,0.8);
+        }
+        
+        .joystick-knob::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 20%;
+            width: 30%;
+            height: 30%;
+            background: radial-gradient(circle, 
+                rgba(255,255,255,0.6) 0%, 
+                transparent 70%);
+            border-radius: 50%;
+        }
+        
+        .joystick-knob::after {
+            content: '✚';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+        
+        /* Range rings */
+        .joystick-range {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 80%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(255,165,0,0.15);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .joystick-range.mid {
+            width: 60%;
+            height: 60%;
+            border-color: rgba(255,165,0,0.1);
+        }
+        
+        /* Visual feedback */
+        .joystick-feedback {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #FFA500;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        .joystick-feedback.active {
+            opacity: 1;
+        }
+        
+        /* Power indicator ring */
+        .joystick-power {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #FFA500;
+            opacity: 0;
+            animation: none;
+            pointer-events: none;
+        }
+        
+        .joystick-power.active {
+            opacity: 1;
+            animation: rotatePower 1s linear infinite;
+        }
+        
+        @keyframes rotatePower {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         
         .mobile-buttons {
@@ -517,7 +718,18 @@
         <!-- Mobile Controls -->
         <div class="mobile-controls">
             <div class="joystick-base" id="joystick">
+                <div class="joystick-range"></div>
+                <div class="joystick-range mid"></div>
+                <div class="joystick-deadzone"></div>
+                <div class="joystick-directions">
+                    <div class="joystick-direction north">N</div>
+                    <div class="joystick-direction south">S</div>
+                    <div class="joystick-direction east">E</div>
+                    <div class="joystick-direction west">W</div>
+                </div>
                 <div class="joystick-knob" id="joystickKnob"></div>
+                <div class="joystick-power" id="joystickPower"></div>
+                <div class="joystick-feedback" id="joystickFeedback">SPEED: 0%</div>
             </div>
         </div>
         
@@ -864,14 +1076,27 @@
                 keys[e.key.toLowerCase()] = false;
             });
             
-            // Mobile joystick
+            // Mobile joystick - Enhanced
             const joystick = document.getElementById('joystick');
             const joystickKnob = document.getElementById('joystickKnob');
+            const joystickPower = document.getElementById('joystickPower');
+            const joystickFeedback = document.getElementById('joystickFeedback');
             let joystickActive = false;
+            let joystickStartX = 0;
+            let joystickStartY = 0;
             
             function handleJoystickStart(e) {
                 e.preventDefault();
                 joystickActive = true;
+                joystickKnob.classList.add('active');
+                joystickPower.classList.add('active');
+                joystickFeedback.classList.add('active');
+                
+                const rect = joystick.getBoundingClientRect();
+                const touch = e.touches ? e.touches[0] : e;
+                joystickStartX = touch.clientX - rect.left - rect.width / 2;
+                joystickStartY = touch.clientY - rect.top - rect.height / 2;
+                
                 handleJoystickMove(e);
             }
             
@@ -888,18 +1113,69 @@
                 let deltaX = touch.clientX - centerX;
                 let deltaY = touch.clientY - centerY;
                 
-                const maxRadius = 50;
+                // Apply dead zone (15% center area)
+                const deadZone = 12; // 15% of 80px max radius
                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                if (distance < deadZone) {
+                    deltaX = 0;
+                    deltaY = 0;
+                } else {
+                    // Smooth out dead zone transition
+                    const adjustedDistance = distance - deadZone;
+                    const ratio = adjustedDistance / distance;
+                    deltaX *= ratio;
+                    deltaY *= ratio;
+                }
+                
+                // Limit to joystick radius with smooth edge
+                const maxRadius = 65;
+                const clampedDistance = Math.min(distance, maxRadius);
                 
                 if (distance > maxRadius) {
                     deltaX = (deltaX / distance) * maxRadius;
                     deltaY = (deltaY / distance) * maxRadius;
                 }
                 
+                // Apply easing for more natural feel
+                const easedX = deltaX * Math.abs(deltaX) / maxRadius;
+                const easedY = deltaY * Math.abs(deltaY) / maxRadius;
+                
+                // Update knob position with spring physics
+                const currentTransform = joystickKnob.style.transform;
+                const springForce = 0.15;
                 joystickKnob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
                 
-                joystickVector.x = deltaX / maxRadius;
-                joystickVector.y = -deltaY / maxRadius;
+                // Calculate joystick vector with sensitivity curve
+                const normalizedDistance = clampedDistance / maxRadius;
+                const power = Math.pow(normalizedDistance, 1.5); // Exponential sensitivity
+                
+                joystickVector.x = (deltaX / maxRadius) * power;
+                joystickVector.y = -(deltaY / maxRadius) * power;
+                
+                // Update visual feedback
+                const speedPercent = Math.round(power * 100);
+                joystickFeedback.textContent = `SPEED: ${speedPercent}%`;
+                
+                // Add haptic feedback on mobile if available
+                if (navigator.vibrate && speedPercent > 80) {
+                    navigator.vibrate(10);
+                }
+                
+                // Visual feedback for direction
+                if (Math.abs(joystickVector.x) > Math.abs(joystickVector.y)) {
+                    if (joystickVector.x > 0.3) {
+                        joystickFeedback.textContent += ' →';
+                    } else if (joystickVector.x < -0.3) {
+                        joystickFeedback.textContent += ' ←';
+                    }
+                } else {
+                    if (joystickVector.y > 0.3) {
+                        joystickFeedback.textContent += ' ↑';
+                    } else if (joystickVector.y < -0.3) {
+                        joystickFeedback.textContent += ' ↓';
+                    }
+                }
             }
             
             function handleJoystickEnd(e) {
@@ -907,12 +1183,41 @@
                 joystickActive = false;
                 joystickVector.x = 0;
                 joystickVector.y = 0;
+                
+                // Smooth return animation
+                joystickKnob.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
                 joystickKnob.style.transform = 'translate(-50%, -50%)';
+                
+                setTimeout(() => {
+                    joystickKnob.style.transition = 'none';
+                }, 200);
+                
+                joystickKnob.classList.remove('active');
+                joystickPower.classList.remove('active');
+                joystickFeedback.classList.remove('active');
+                joystickFeedback.textContent = 'SPEED: 0%';
             }
             
+            // Touch events
             joystick.addEventListener('touchstart', handleJoystickStart, { passive: false });
             joystick.addEventListener('touchmove', handleJoystickMove, { passive: false });
             joystick.addEventListener('touchend', handleJoystickEnd, { passive: false });
+            joystick.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
+            
+            // Mouse events for testing
+            joystick.addEventListener('mousedown', (e) => {
+                handleJoystickStart(e);
+                
+                const mouseMoveHandler = (e) => handleJoystickMove(e);
+                const mouseUpHandler = (e) => {
+                    handleJoystickEnd(e);
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                };
+                
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+            });
             
             // Mobile buttons
             document.getElementById('boostBtn').addEventListener('touchstart', (e) => {
