@@ -2,424 +2,1599 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Hoher Fläming Helicopter Ride</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoher Fläming Helicopter - Vietnam Era</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            overflow: hidden;
+            position: relative;
+            height: 100vh;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Compact HUD */
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .hud-top {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+        
+        .hud-panel {
+            background: linear-gradient(135deg, 
+                rgba(60,60,40,0.85) 0%, 
+                rgba(40,40,30,0.85) 100%);
+            backdrop-filter: blur(5px);
+            padding: 8px 20px;
+            border: 2px solid #6B4423;
+            border-radius: 5px;
+            box-shadow: 
+                inset 0 0 10px rgba(0,0,0,0.5),
+                0 0 15px rgba(0,0,0,0.5);
+        }
+        
+        .stat-group {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .stat-label {
+            font-size: 9px;
+            color: rgba(255,165,0,0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+        
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: #FFA500;
+            text-shadow: 0 0 8px rgba(255,165,0,0.5);
+        }
+        
+        /* Compact Gauges */
+        .gauge-container {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            pointer-events: none;
+        }
+        
+        .gauge {
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, 
+                rgba(40,40,30,0.9) 0%, 
+                rgba(20,20,15,0.9) 100%);
+            border: 2px solid #6B4423;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.7);
+        }
+        
+        .gauge-label {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: rgba(255,165,0,0.8);
+            letter-spacing: 1px;
+        }
+        
+        .gauge-value {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #FFA500;
+            font-weight: 700;
+        }
+        
+        .gauge-needle {
+            position: absolute;
+            width: 1px;
+            height: 35%;
+            background: #FF4500;
+            left: 50%;
+            top: 50%;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.2s ease;
+        }
+        
+        /* Compact Fuel Bar */
+        .fuel-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px;
+            pointer-events: none;
+        }
+        
+        .fuel-bar {
+            height: 20px;
+            background: rgba(20,20,15,0.9);
+            border: 2px solid #6B4423;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .fuel-fill {
+            height: 100%;
+            background: repeating-linear-gradient(
+                90deg,
+                #228B22,
+                #228B22 5px,
+                #32CD32 5px,
+                #32CD32 10px
+            );
+            transition: width 0.3s ease;
+        }
+        
+        .fuel-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #FFA500;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 0 black;
+        }
+        
+        /* Compact Radar */
+        .radar-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, 
+                rgba(0,40,0,0.9) 0%, 
+                rgba(0,10,0,0.9) 100%);
+            border: 2px solid #6B4423;
+            border-radius: 50%;
+            box-shadow: 
+                0 0 15px rgba(0,255,0,0.2),
+                inset 0 0 15px rgba(0,0,0,0.7);
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(0,255,0,0.6) 50%, 
+                transparent 100%);
+            transform-origin: left center;
+            animation: radarSweep 3s linear infinite;
+        }
+        
+        @keyframes radarSweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .radar-canvas {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        /* Start Screen */
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, 
+                rgba(40,40,30,0.95) 0%, 
+                rgba(0,0,0,0.98) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: all 1s ease;
+        }
+        
+        #startScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .game-logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 48px;
+            font-weight: 900;
+            color: #FFA500;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 
+                0 0 20px rgba(255,165,0,0.5),
+                3px 3px 0 rgba(0,0,0,0.8);
+        }
+        
+        .game-subtitle {
+            color: rgba(255,165,0,0.8);
+            font-size: 18px;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        
+        .start-button {
+            background: linear-gradient(135deg, #6B4423 0%, #8B4513 100%);
+            color: #FFA500;
+            border: 2px solid #FFA500;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255,165,0,0.3);
+        }
+        
+        .start-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255,165,0,0.5);
+        }
+        
+        /* Achievement */
+        .achievement {
+            position: fixed;
+            top: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, 
+                rgba(139,69,19,0.95) 0%, 
+                rgba(60,60,40,0.95) 100%);
+            padding: 15px 30px;
+            border-radius: 5px;
+            border: 2px solid #FFA500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 2000;
+            transition: top 0.5s ease;
+        }
+        
+        .achievement.show {
+            top: 80px;
+        }
+        
+        .achievement-icon {
+            font-size: 32px;
+        }
+        
+        .achievement-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #FFA500;
+            margin-bottom: 3px;
+        }
+        
+        .achievement-desc {
+            font-size: 11px;
+            color: rgba(255,165,0,0.8);
+        }
+        
+        /* Mobile Controls - Enhanced Joystick */
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 200;
+            display: none;
+        }
+        
+        .joystick-base {
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(139,69,19,0.8) 0%, 
+                rgba(60,40,20,0.9) 50%,
+                rgba(20,15,10,0.95) 100%);
+            border: 4px solid #8B4513;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 
+                inset 0 0 30px rgba(0,0,0,0.7),
+                inset 0 -5px 15px rgba(0,0,0,0.8),
+                0 5px 20px rgba(0,0,0,0.5),
+                0 0 40px rgba(255,165,0,0.2);
+            overflow: visible;
+        }
+        
+        .joystick-base::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,165,0,0.2);
+            pointer-events: none;
+        }
+        
+        .joystick-base::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+            background: repeating-conic-gradient(
+                from 0deg at 50% 50%,
+                transparent 0deg,
+                transparent 8deg,
+                rgba(255,165,0,0.1) 8deg,
+                rgba(255,165,0,0.1) 10deg
+            );
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        /* Direction indicators */
+        .joystick-directions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .joystick-direction {
+            position: absolute;
+            color: rgba(255,165,0,0.4);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .joystick-direction.north {
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .joystick-direction.south {
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .joystick-direction.east {
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .joystick-direction.west {
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Center dead zone indicator */
+        .joystick-deadzone {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            transform: translate(-50%, -50%);
+            border: 1px dashed rgba(255,165,0,0.2);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .joystick-knob {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle at 35% 35%, 
+                #FFA500 0%, 
+                #8B4513 50%,
+                #654321 100%);
+            border: 3px solid #FFD700;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 
+                inset 0 -3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 8px rgba(255,255,255,0.3),
+                0 5px 15px rgba(0,0,0,0.5),
+                0 0 25px rgba(255,165,0,0.4);
+            transition: box-shadow 0.2s ease;
+        }
+        
+        .joystick-knob.active {
+            box-shadow: 
+                inset 0 -3px 8px rgba(0,0,0,0.5),
+                inset 0 3px 8px rgba(255,255,255,0.3),
+                0 2px 10px rgba(0,0,0,0.5),
+                0 0 40px rgba(255,165,0,0.8);
+        }
+        
+        .joystick-knob::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 20%;
+            width: 30%;
+            height: 30%;
+            background: radial-gradient(circle, 
+                rgba(255,255,255,0.6) 0%, 
+                transparent 70%);
+            border-radius: 50%;
+        }
+        
+        .joystick-knob::after {
+            content: '✚';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+        
+        /* Range rings */
+        .joystick-range {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 80%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(255,165,0,0.15);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .joystick-range.mid {
+            width: 60%;
+            height: 60%;
+            border-color: rgba(255,165,0,0.1);
+        }
+        
+        /* Visual feedback */
+        .joystick-feedback {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #FFA500;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        .joystick-feedback.active {
+            opacity: 1;
+        }
+        
+        /* Power indicator ring */
+        .joystick-power {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #FFA500;
+            opacity: 0;
+            animation: none;
+            pointer-events: none;
+        }
+        
+        .joystick-power.active {
+            opacity: 1;
+            animation: rotatePower 1s linear infinite;
+        }
+        
+        @keyframes rotatePower {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .mobile-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 200;
+        }
+        
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #6B4423;
+            background: rgba(60,60,40,0.8);
+            color: #FFA500;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 3px;
+        }
+        
+        .mobile-btn:active {
+            transform: scale(0.95);
+            background: rgba(139,69,19,0.9);
+        }
+        
+        .mobile-btn-icon {
+            font-size: 20px;
+        }
+        
+        /* Warning Overlay */
+        .warning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, 
+                transparent 40%, 
+                rgba(255,0,0,0.2) 100%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 90;
+        }
+        
+        .warning-overlay.active {
+            opacity: 1;
+            animation: warningPulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes warningPulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.4; }
+        }
+        
+        @media (max-width: 768px), (pointer: coarse) {
+            .mobile-controls {
+                display: block;
+            }
+            
+            .mobile-buttons {
+                display: flex;
+            }
+            
+            .gauge-container {
+                display: none;
+            }
+            
+            .radar-container {
+                width: 100px;
+                height: 100px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="loading-screen">
-        <div class="loading-helicopter">🚁</div>
-        <div class="loading-text">Loading Hoher Fläming Map...</div>
-        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-    </div>
-    <div id="hud-container"></div>
-    <div id="mobile-controls" style="display:none">
-        <div id="joystick"></div>
-        <div id="altitude-controls">
-            <button id="alt-up">⬆️</button>
-            <span id="altitudeDisplay"></span>
-            <button id="alt-down">⬇️</button>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- UI Layer -->
+        <div id="ui">
+            <!-- Top HUD -->
+            <div class="hud-top">
+                <div class="hud-panel">
+                    <div class="stat-group">
+                        <div class="stat">
+                            <div class="stat-label">Score</div>
+                            <div class="stat-value" id="score">0000</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Targets</div>
+                            <div class="stat-value" id="pois">00/16</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Time</div>
+                            <div class="stat-value" id="time">00:00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compact Gauges -->
+            <div class="gauge-container">
+                <div class="gauge">
+                    <div class="gauge-label">ALT</div>
+                    <div class="gauge-value" id="altValue">0</div>
+                    <div class="gauge-needle" id="altNeedle"></div>
+                </div>
+                <div class="gauge">
+                    <div class="gauge-label">SPD</div>
+                    <div class="gauge-value" id="speedValue">0</div>
+                    <div class="gauge-needle" id="speedNeedle"></div>
+                </div>
+            </div>
+            
+            <!-- Fuel System -->
+            <div class="fuel-container">
+                <div class="fuel-bar">
+                    <div class="fuel-fill" id="fuelFill" style="width: 100%"></div>
+                    <div class="fuel-label">FUEL</div>
+                </div>
+            </div>
+            
+            <!-- Radar -->
+            <div class="radar-container">
+                <canvas class="radar-canvas" id="radarCanvas"></canvas>
+                <div class="radar-sweep"></div>
+            </div>
+            
+            <!-- Warning Overlay -->
+            <div class="warning-overlay" id="warningOverlay"></div>
         </div>
-        <button id="land-btn" style="display:none">Land</button>
-    </div>
-    <div id="poi-modal" class="modal" style="display:none">
-        <div class="modal-content">
-            <span class="close" id="poi-close">&times;</span>
-            <div id="poi-title"></div>
-            <div id="poi-desc"></div>
-            <button id="next-poi" style="margin-top:16px;">Next &gt;</button>
+        
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+            <div class="joystick-base" id="joystick">
+                <div class="joystick-range"></div>
+                <div class="joystick-range mid"></div>
+                <div class="joystick-deadzone"></div>
+                <div class="joystick-directions">
+                    <div class="joystick-direction north">N</div>
+                    <div class="joystick-direction south">S</div>
+                    <div class="joystick-direction east">E</div>
+                    <div class="joystick-direction west">W</div>
+                </div>
+                <div class="joystick-knob" id="joystickKnob"></div>
+                <div class="joystick-power" id="joystickPower"></div>
+                <div class="joystick-feedback" id="joystickFeedback">SPEED: 0%</div>
+            </div>
+        </div>
+        
+        <!-- Altitude Controls -->
+        <div class="altitude-controls">
+            <button class="altitude-btn up" id="altUpBtn" data-label="ALT">▲</button>
+            <button class="altitude-btn down" id="altDownBtn" data-label="">▼</button>
+        </div>
+        
+        <div class="altitude-display" id="altitudeDisplay">ALT: 40m</div>
+        
+        <div class="mobile-buttons">
+            <button class="mobile-btn" id="boostBtn">
+                <span class="mobile-btn-icon">⚡</span>
+                <span>BOOST</span>
+            </button>
+            <button class="mobile-btn" id="landBtn">
+                <span class="mobile-btn-icon">🛬</span>
+                <span>LAND</span>
+            </button>
+        </div>
+        
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h1 class="game-logo">HOHER FLÄMING</h1>
+            <p class="game-subtitle">Vietnam Era Mission</p>
+            <button class="start-button" id="startBtn">START MISSION</button>
+        </div>
+        
+        <!-- Achievement -->
+        <div class="achievement" id="achievement">
+            <div class="achievement-icon">🏆</div>
+            <div>
+                <div class="achievement-title" id="achievementTitle">Achievement!</div>
+                <div class="achievement-desc" id="achievementDesc">Description</div>
+            </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/controls/OrbitControls.js"></script>
+    
     <script>
-    // --- Constants ---
-    const POIS = [
-        {name:"Stadt und Burg Ziesar", x:-8027, z:-652, desc:"Historic bishop's residence."},
-        {name:"Gutspark Dahlen", x:-7091, z:697, desc:"English-style park with vistas."},
-        {name:"Klein Briesener Bach", x:-4892, z:-349, desc:"Protected stream area."},
-        {name:"Paradies Dippmannsdorf", x:-3824, z:-1243, desc:"Nature reserve with 30+ springs."},
-        {name:"Töpferort Görzke", x:-1748, z:-1798, desc:"Traditional pottery village."},
-        {name:"Hagelberg", x:-1049, z:-3178, desc:"Site of 1813 Napoleonic battle."},
-        {name:"Bad Belzig mit Burg Eisenhardt", x:0, z:0, desc:"Castle with panoramic views."},
-        {name:"Aussichtspunkt Belziger Landschaftswiesen", x:1682, z:1331, desc:"Bird sanctuary viewpoint."},
-        {name:"Wiesenburg mit Schloss und Park", x:5002, z:-2678, desc:"Picturesque castle and park."},
-        {name:"Naturparkzentrum Hoher Fläming", x:4345, z:22, desc:"Nature park information center."},
-        {name:"Raben mit Burg Rabenstein", x:5874, z:2698, desc:"Important border castle."},
-        {name:"Niemegk", x:2142, z:4168, desc:"Historic town with local culture."},
-        {name:"Flämingbuchen", x:165, z:4460, desc:"Unique beech tree islands."},
-        {name:"Brautrummel mit Riesenstein", x:-2455, z:3433, desc:"Periglacial valley with giant stone."},
-        {name:"Neuendorfer Rummel", x:-5200, z:1745, desc:"Ice Age dry valley."},
-        {name:"Garrey mit Aussichtsplattform", x:-7316, z:2473, desc:"Observation deck at old waterworks."},
-    ];
-    let visitedPOIs = Array(POIS.length).fill(false);
-    let currentPOI = -1;
-
-    // --- HUD ---
-    function renderHUD() {
-        const hud = document.getElementById('hud-container');
-        if (!hud) return;
-        let visited = visitedPOIs.filter(v=>v).length;
-        hud.innerHTML = `
-            <div class="hud-panel">
-                <div>POIs: <span style="color:#ffe066">${visited}</span> / 16</div>
-            </div>
-            <div class="hud-panel">
-                <span id="speedDisplay">SPD: 0 km/h</span>
-            </div>
-        `;
-    }
-
-    // --- Three.js Setup ---
-    let scene, camera, renderer, helicopter, rotorGroup, mainRotor, tailRotor;
-    let helicopterVelocity = new THREE.Vector3();
-    let helicopterRotation = 0;
-    let poiMarkers = [];
-    let clock;
-    let keys = {};
-
-    function showLoading(percent) {
-        let fill = document.querySelector('.loading-bar-fill');
-        if (fill) fill.style.width = percent + '%';
-    }
-
-    function hideLoading() {
-        let loader = document.getElementById('loading-screen');
-        if (loader) loader.style.opacity = 0;
-        setTimeout(()=>{if(loader) loader.style.display='none';}, 600);
-    }
-
-    function init() {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xaedff2);
-
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 1, 30000);
-        camera.position.set(0,150,400);
-
-        renderer = new THREE.WebGLRenderer({antialias:true});
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // --- Lighting
-        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambient);
-        const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-        dir.position.set(100,500,300);
-        scene.add(dir);
-
-        // --- Map ground
-        const loader = new THREE.TextureLoader();
-        loader.load(
-            'map.jpg',
-            function(texture){
-                let geo = new THREE.PlaneGeometry(23000,18000);
-                let mat = new THREE.MeshLambertMaterial({map:texture});
-                let mesh = new THREE.Mesh(geo, mat);
-                mesh.rotation.x = -Math.PI/2;
-                mesh.position.y = 0;
-                scene.add(mesh);
-                showLoading(80);
-            }
-        );
-
-        // --- POI Markers
-        for(let i=0; i<POIS.length; ++i){
-            let markerGeo = new THREE.SphereGeometry(70,12,12);
-            let markerMat = new THREE.MeshBasicMaterial({color:0xffe066});
-            let marker = new THREE.Mesh(markerGeo, markerMat);
-            marker.position.set(POIS[i].x,20,POIS[i].z);
-            scene.add(marker);
-            poiMarkers.push(marker);
-        }
-
-        // --- Helicopter
-        helicopter = new THREE.Group();
-        // Body
-        let bodyGeo = new THREE.CylinderGeometry(20,22,110,16);
-        let bodyMat = new THREE.MeshPhongMaterial({color:0x348cdb});
-        let body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.rotation.z = Math.PI/2;
-        helicopter.add(body);
-        // Cockpit
-        let cockpitGeo = new THREE.SphereGeometry(23,14,12,0,Math.PI);
-        let cockpitMat = new THREE.MeshPhongMaterial({color:0x99d6ea, transparent:true, opacity:0.82});
-        let cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
-        cockpit.position.x = 55;
-        cockpit.position.y = 8;
-        helicopter.add(cockpit);
-        // Skids
-        let skidMat = new THREE.MeshPhongMaterial({color:0x333333});
-        for (let s=-1; s<=1; s+=2) {
-            let skidGeo = new THREE.CylinderGeometry(2.8,2.8,58,8);
-            let skid = new THREE.Mesh(skidGeo, skidMat);
-            skid.position.set(-8, -22, s*18);
-            skid.rotation.z = Math.PI/2;
-            helicopter.add(skid);
-        }
-        // Rotor Group
-        rotorGroup = new THREE.Group();
-        // Main rotor
-        let rotorGeo = new THREE.BoxGeometry(8,1,110);
-        let rotorMat = new THREE.MeshPhongMaterial({color:0x222222});
-        mainRotor = new THREE.Mesh(rotorGeo, rotorMat);
-        mainRotor.position.y = 30;
-        rotorGroup.add(mainRotor);
-        // Tail boom
-        let tailGeo = new THREE.CylinderGeometry(4,4,60,8);
-        let tail = new THREE.Mesh(tailGeo, bodyMat);
-        tail.position.x = -68;
-        tail.position.y = 3;
-        tail.rotation.z = Math.PI/2;
-        helicopter.add(tail);
-
-        // Tail rotor
-        let tailRotorGeo = new THREE.BoxGeometry(2,20,2);
-        tailRotor = new THREE.Mesh(tailRotorGeo, rotorMat);
-        tailRotor.position.set(-98, 3, 0);
-        tailRotor.rotation.x = Math.PI/2;
-        rotorGroup.add(tailRotor);
-
-        helicopter.add(rotorGroup);
-        helicopter.position.set(0,60,0);
-        scene.add(helicopter);
-
+        // Initialize game immediately
+        let scene, camera, renderer, helicopter, rotorGroup;
+        let gameRunning = false;
+        let score = 0;
+        let fuel = 100;
+        let visitedPOIs = new Set();
+        let gameStartTime = 0;
+        let helicopterVelocity = new THREE.Vector3();
+        let helicopterRotation = 0;
+        let poiMarkers = [];
+        
+        // POI data - massively spread across huge map
+        const pois = [
+            { id: 1, x: -6400, z: -6400, name: "Stadt und Burg Ziesar", visited: false },
+            { id: 2, x: 4800, z: -7200, name: "Gutspark Dahlen", visited: false },
+            { id: 3, x: -3200, z: -1600, name: "Klein Briesener Bach", visited: false },
+            { id: 4, x: 3200, z: -3200, name: "Paradies Dippmannsdorf", visited: false },
+            { id: 5, x: -7200, z: 3200, name: "Töpferort Görzke", visited: false },
+            { id: 6, x: 6400, z: 0, name: "Hagelberg", visited: false },
+            { id: 7, x: 0, z: 0, name: "Bad Belzig", visited: false },
+            { id: 8, x: -4800, z: 4800, name: "Belziger Landschaftswiesen", visited: false },
+            { id: 9, x: 4000, z: 4000, name: "Wiesenburg", visited: false },
+            { id: 10, x: -1600, z: 6400, name: "Naturparkzentrum", visited: false },
+            { id: 11, x: 7200, z: 4000, name: "Raben mit Burg", visited: false },
+            { id: 12, x: -8000, z: 6400, name: "Niemegk", visited: false },
+            { id: 13, x: 1600, z: -5600, name: "Flämingbuchen", visited: false },
+            { id: 14, x: -4000, z: 1600, name: "Brautrummel", visited: false },
+            { id: 15, x: 5600, z: 5600, name: "Neuendorfer Rummel", visited: false },
+            { id: 16, x: -800, z: 3200, name: "Garrey", visited: false }
+        ];
+        
         // Controls
-        keys = {};
-        document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-        document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-        // Mouse drag yaw
-        let mouseDown = false;
-        let lastX = 0;
-        document.addEventListener('mousedown', e => { mouseDown=true; lastX=e.clientX; });
-        document.addEventListener('mouseup', e => { mouseDown=false; });
-        document.addEventListener('mousemove', e => {
-            if (!mouseDown) return;
-            let dx = e.clientX - lastX;
-            helicopterRotation -= dx*0.008;
-            lastX = e.clientX;
-        });
-
-        // Mobile controls
-        setupMobileControls();
-
-        // Window resize
-        window.addEventListener('resize', onWindowResize);
-
-        // Initial HUD
-        renderHUD();
-        showLoading(90);
-
-        clock = new THREE.Clock();
-
-        // Hide loader
-        setTimeout(hideLoading, 900);
-
-        animate();
-    }
-
-    function onWindowResize() {
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    // --- Animation Loop ---
-    function animate() {
-        requestAnimationFrame(animate);
-
-        let dt = Math.min(clock.getDelta(), 0.12);
-
-        // --- Controls ---
-        let inputForward = 0, inputTurn = 0, inputAltitude = 0, mobileBoost = false;
-        if (isMobile) {
-            // Joystick input handled separately
-            inputForward = joystickVector.y;
-            inputTurn = joystickVector.x;
+        const keys = {};
+        let joystickVector = { x: 0, y: 0 };
+        let mobileBoost = false;
+        let mobileLand = false;
+        let mobileAltUp = false;
+        let mobileAltDown = false;
+        
+        function init3DGame() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 500, 24000);
+            
+            // Camera - positioned behind helicopter initially
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                2000
+            );
+            camera.position.set(0, 100, -150); // Behind and above the helicopter
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('gameCanvas'),
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Sky - massive dome for huge map
+            const skyGeometry = new THREE.SphereGeometry(24000, 32, 32);
+            const skyMaterial = new THREE.MeshBasicMaterial({
+                color: 0x87CEEB,
+                side: THREE.BackSide
+            });
+            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+            
+            // Terrain with map texture - 16x larger than original (4x4)
+            const terrainGeometry = new THREE.PlaneGeometry(24000, 24000, 100, 100);
+            
+            // Load map texture
+            const textureLoader = new THREE.TextureLoader();
+            
+            // Try to load map from GitHub repository
+            // Using a publicly available map of the Hoher Fläming region
+            const mapTexture = textureLoader.load(
+                'https://raw.githubusercontent.com/Mikieb1982/Hoher-Flaeming-Helicopter-Ride/main/map.jpg',
+                // Success callback
+                function(texture) {
+                    console.log('Map texture loaded successfully');
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8); // Repeat texture 8x8 for massive area
+                },
+                // Progress callback
+                undefined,
+                // Error callback - use fallback texture
+                function(error) {
+                    console.log('Map texture failed to load, using procedural terrain');
+                    // Create a canvas texture as fallback
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 2048;
+                    canvas.height = 2048;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Create a topographic style map
+                    const gradient = ctx.createRadialGradient(1024, 1024, 0, 1024, 1024, 1024);
+                    gradient.addColorStop(0, '#4a5f3a');
+                    gradient.addColorStop(0.3, '#5a7a4a');
+                    gradient.addColorStop(0.6, '#3a5f3a');
+                    gradient.addColorStop(1, '#2a4f2a');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, 2048, 2048);
+                    
+                    // Add some terrain features
+                    ctx.strokeStyle = 'rgba(139, 119, 101, 0.3)';
+                    ctx.lineWidth = 4;
+                    
+                    // Draw roads
+                    for (let i = 0; i < 4; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(Math.random() * 2048, 0);
+                        ctx.quadraticCurveTo(
+                            Math.random() * 2048, 
+                            1024, 
+                            Math.random() * 2048, 
+                            2048
+                        );
+                        ctx.stroke();
+                    }
+                    
+                    // Add forest patches
+                    for (let i = 0; i < 100; i++) {
+                        ctx.fillStyle = `rgba(34, 139, 34, ${Math.random() * 0.3 + 0.1})`;
+                        ctx.beginPath();
+                        ctx.arc(
+                            Math.random() * 2048,
+                            Math.random() * 2048,
+                            Math.random() * 100 + 30,
+                            0, Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                    
+                    // Add settlement markers
+                    ctx.fillStyle = 'rgba(139, 69, 19, 0.4)';
+                    for (let i = 0; i < 32; i++) {
+                        ctx.fillRect(
+                            Math.random() * 2008 + 20,
+                            Math.random() * 2008 + 20,
+                            Math.random() * 30 + 15,
+                            Math.random() * 30 + 15
+                        );
+                    }
+                    
+                    const fallbackTexture = new THREE.CanvasTexture(canvas);
+                    fallbackTexture.wrapS = THREE.RepeatWrapping;
+                    fallbackTexture.wrapT = THREE.RepeatWrapping;
+                    fallbackTexture.repeat.set(8, 8);
+                    terrainMaterial.map = fallbackTexture;
+                    terrainMaterial.needsUpdate = true;
+                }
+            );
+            
+            const terrainMaterial = new THREE.MeshLambertMaterial({
+                map: mapTexture,
+                side: THREE.DoubleSide
+            });
+            
+            // Add slight terrain variation for 3D effect
+            const vertices = terrainGeometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                vertices[i + 2] = Math.sin(vertices[i] * 0.002) * 15 + Math.cos(vertices[i + 1] * 0.002) * 15;
+            }
+            terrainGeometry.computeVertexNormals();
+            
+            const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+            terrain.rotation.x = -Math.PI / 2;
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+            
+            // Trees - massive forest across huge area
+            for (let i = 0; i < 800; i++) {
+                const treeGroup = new THREE.Group();
+                
+                const trunkGeometry = new THREE.CylinderGeometry(2, 4, 20);
+                const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.y = 10;
+                trunk.castShadow = true;
+                treeGroup.add(trunk);
+                
+                const leavesGeometry = new THREE.SphereGeometry(12, 6, 5);
+                const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+                const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                leaves.position.y = 25;
+                leaves.castShadow = true;
+                treeGroup.add(leaves);
+                
+                // Trees are bigger and spread across massive area
+                treeGroup.position.x = (Math.random() - 0.5) * 22000;
+                treeGroup.position.z = (Math.random() - 0.5) * 22000;
+                treeGroup.scale.setScalar(1 + Math.random());
+                scene.add(treeGroup);
+            }
+            
+            // Create helicopter
+            helicopter = new THREE.Group();
+            
+            // Body (center)
+            const bodyGeometry = new THREE.SphereGeometry(6, 8, 6);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a2e });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.scale.set(1.5, 1, 1);
+            body.castShadow = true;
+            helicopter.add(body);
+            
+            // Cockpit (FRONT - along positive Z axis for forward flight)
+            const cockpitGeometry = new THREE.SphereGeometry(4, 6, 6);
+            const cockpitMaterial = new THREE.MeshPhongMaterial({ color: 0x4494ff });
+            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpit.position.set(0, 0, 6); // Position cockpit at front (positive Z)
+            cockpit.scale.set(1, 0.8, 1.2);
+            helicopter.add(cockpit);
+            
+            // Tail (BACK - along negative Z axis)
+            const tailGeometry = new THREE.CylinderGeometry(2, 1, 20);
+            const tailMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a2e });
+            const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+            tail.position.set(0, 0, -12); // Position tail at back (negative Z)
+            tail.rotation.x = Math.PI / 2; // Rotate to align with Z axis
+            tail.castShadow = true;
+            helicopter.add(tail);
+            
+            // Tail fin (vertical stabilizer)
+            const finGeometry = new THREE.BoxGeometry(0.5, 6, 4);
+            const finMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a2e });
+            const fin = new THREE.Mesh(finGeometry, finMaterial);
+            fin.position.set(0, 3, -18);
+            helicopter.add(fin);
+            
+            // Main Rotor
+            rotorGroup = new THREE.Group();
+            const rotorGeometry = new THREE.BoxGeometry(60, 0.3, 2);
+            const rotorMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const rotor1 = new THREE.Mesh(rotorGeometry, rotorMaterial);
+            const rotor2 = new THREE.Mesh(rotorGeometry, rotorMaterial);
+            rotor2.rotation.y = Math.PI / 2;
+            rotorGroup.add(rotor1, rotor2);
+            rotorGroup.position.y = 6;
+            helicopter.add(rotorGroup);
+            
+            // Tail rotor
+            const tailRotorGeometry = new THREE.BoxGeometry(8, 8, 0.3);
+            const tailRotorMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const tailRotor = new THREE.Mesh(tailRotorGeometry, tailRotorMaterial);
+            tailRotor.position.set(0.5, 3, -18);
+            helicopter.add(tailRotor);
+            
+            // Landing skids
+            const skidGeometry = new THREE.CylinderGeometry(0.3, 0.3, 20);
+            const skidMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const skid1 = new THREE.Mesh(skidGeometry, skidMaterial);
+            skid1.position.set(-3, -5, 0);
+            skid1.rotation.x = Math.PI / 2;
+            helicopter.add(skid1);
+            
+            const skid2 = new THREE.Mesh(skidGeometry, skidMaterial);
+            skid2.position.set(3, -5, 0);
+            skid2.rotation.x = Math.PI / 2;
+            helicopter.add(skid2);
+            
+            helicopter.position.y = 40;
+            scene.add(helicopter);
+            
+            // Create POI markers
+            pois.forEach(poi => {
+                const markerGroup = new THREE.Group();
+                
+                const sphereGeometry = new THREE.SphereGeometry(4, 8, 8);
+                const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                markerGroup.add(sphere);
+                
+                const beamGeometry = new THREE.CylinderGeometry(1, 6, 150);
+                const beamMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+                beam.position.y = 75;
+                markerGroup.add(beam);
+                
+                markerGroup.position.set(poi.x, 20, poi.z);
+                markerGroup.userData = poi;
+                scene.add(markerGroup);
+                poiMarkers.push(markerGroup);
+            });
+            
+            setupControls();
+        }
+        
+        function setupControls() {
+            // Keyboard
+            document.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+            
+            // Mobile joystick - Enhanced
+            const joystick = document.getElementById('joystick');
+            const joystickKnob = document.getElementById('joystickKnob');
+            const joystickPower = document.getElementById('joystickPower');
+            const joystickFeedback = document.getElementById('joystickFeedback');
+            let joystickActive = false;
+            let joystickStartX = 0;
+            let joystickStartY = 0;
+            
+            function handleJoystickStart(e) {
+                e.preventDefault();
+                joystickActive = true;
+                joystickKnob.classList.add('active');
+                joystickPower.classList.add('active');
+                joystickFeedback.classList.add('active');
+                
+                const rect = joystick.getBoundingClientRect();
+                const touch = e.touches ? e.touches[0] : e;
+                joystickStartX = touch.clientX - rect.left - rect.width / 2;
+                joystickStartY = touch.clientY - rect.top - rect.height / 2;
+                
+                handleJoystickMove(e);
+            }
+            
+            function handleJoystickMove(e) {
+                if (!joystickActive) return;
+                e.preventDefault();
+                
+                const rect = joystick.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                let touch = e.touches ? e.touches[0] : e;
+                
+                let deltaX = touch.clientX - centerX;
+                let deltaY = touch.clientY - centerY;
+                
+                // Apply dead zone (15% center area)
+                const deadZone = 12; // 15% of 80px max radius
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                if (distance < deadZone) {
+                    deltaX = 0;
+                    deltaY = 0;
+                } else {
+                    // Smooth out dead zone transition
+                    const adjustedDistance = distance - deadZone;
+                    const ratio = adjustedDistance / distance;
+                    deltaX *= ratio;
+                    deltaY *= ratio;
+                }
+                
+                // Limit to joystick radius with smooth edge
+                const maxRadius = 65;
+                const clampedDistance = Math.min(distance, maxRadius);
+                
+                if (distance > maxRadius) {
+                    deltaX = (deltaX / distance) * maxRadius;
+                    deltaY = (deltaY / distance) * maxRadius;
+                }
+                
+                // Apply easing for more natural feel
+                const easedX = deltaX * Math.abs(deltaX) / maxRadius;
+                const easedY = deltaY * Math.abs(deltaY) / maxRadius;
+                
+                // Update knob position with spring physics
+                const currentTransform = joystickKnob.style.transform;
+                const springForce = 0.15;
+                joystickKnob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                
+                // Calculate joystick vector with sensitivity curve
+                const normalizedDistance = clampedDistance / maxRadius;
+                const power = Math.pow(normalizedDistance, 1.5); // Exponential sensitivity
+                
+                joystickVector.x = (deltaX / maxRadius) * power;
+                joystickVector.y = -(deltaY / maxRadius) * power;
+                
+                // Update visual feedback
+                const speedPercent = Math.round(power * 100);
+                joystickFeedback.textContent = `SPEED: ${speedPercent}%`;
+                
+                // Add haptic feedback on mobile if available
+                if (navigator.vibrate && speedPercent > 80) {
+                    navigator.vibrate(10);
+                }
+                
+                // Visual feedback for direction
+                if (Math.abs(joystickVector.x) > Math.abs(joystickVector.y)) {
+                    if (joystickVector.x > 0.3) {
+                        joystickFeedback.textContent += ' →';
+                    } else if (joystickVector.x < -0.3) {
+                        joystickFeedback.textContent += ' ←';
+                    }
+                } else {
+                    if (joystickVector.y > 0.3) {
+                        joystickFeedback.textContent += ' ↑';
+                    } else if (joystickVector.y < -0.3) {
+                        joystickFeedback.textContent += ' ↓';
+                    }
+                }
+            }
+            
+            function handleJoystickEnd(e) {
+                e.preventDefault();
+                joystickActive = false;
+                joystickVector.x = 0;
+                joystickVector.y = 0;
+                
+                // Smooth return animation
+                joystickKnob.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                joystickKnob.style.transform = 'translate(-50%, -50%)';
+                
+                setTimeout(() => {
+                    joystickKnob.style.transition = 'none';
+                }, 200);
+                
+                joystickKnob.classList.remove('active');
+                joystickPower.classList.remove('active');
+                joystickFeedback.classList.remove('active');
+                joystickFeedback.textContent = 'SPEED: 0%';
+            }
+            
+            // Touch events
+            joystick.addEventListener('touchstart', handleJoystickStart, { passive: false });
+            joystick.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            joystick.addEventListener('touchend', handleJoystickEnd, { passive: false });
+            joystick.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
+            
+            // Mouse events for testing
+            joystick.addEventListener('mousedown', (e) => {
+                handleJoystickStart(e);
+                
+                const mouseMoveHandler = (e) => handleJoystickMove(e);
+                const mouseUpHandler = (e) => {
+                    handleJoystickEnd(e);
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                };
+                
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+            });
+            
+            // Mobile buttons
+            document.getElementById('boostBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                mobileBoost = true;
+            });
+            
+            document.getElementById('boostBtn').addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileBoost = false;
+            });
+            
+            document.getElementById('landBtn').addEventListener('click', () => {
+                mobileLand = true;
+                setTimeout(() => { mobileLand = false; }, 100);
+            });
+            
+            // Altitude control buttons
+            const altUpBtn = document.getElementById('altUpBtn');
+            const altDownBtn = document.getElementById('altDownBtn');
+            
+            if (altUpBtn) {
+                altUpBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    mobileAltUp = true;
+                });
+                
+                altUpBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    mobileAltUp = false;
+                });
+                
+                altUpBtn.addEventListener('mousedown', () => {
+                    mobileAltUp = true;
+                });
+                
+                altUpBtn.addEventListener('mouseup', () => {
+                    mobileAltUp = false;
+                });
+            }
+            
+            if (altDownBtn) {
+                altDownBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    mobileAltDown = true;
+                });
+                
+                altDownBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    mobileAltDown = false;
+                });
+                
+                altDownBtn.addEventListener('mousedown', () => {
+                    mobileAltDown = true;
+                });
+                
+                altDownBtn.addEventListener('mouseup', () => {
+                    mobileAltDown = false;
+                });
+            }
+            
+            // Start button
+            document.getElementById('startBtn').addEventListener('click', startGame);
+        }
+        
+        function startGame() {
+            gameRunning = true;
+            gameStartTime = Date.now();
+            document.getElementById('startScreen').classList.add('hidden');
+            animate();
+        }
+        
+        function updateHelicopter(deltaTime) {
+            // Get input from keyboard or joystick
+            let inputForward = 0;
+            let inputTurn = 0;
+            let inputAltitude = 0;
+            
+            // Keyboard controls - tank-style (forward/back + turn)
+            if (keys['w'] || keys['arrowup']) inputForward += 1;
+            if (keys['s'] || keys['arrowdown']) inputForward -= 1;
+            if (keys['a'] || keys['arrowleft']) inputTurn -= 1;
+            if (keys['d'] || keys['arrowright']) inputTurn += 1;
+            if (keys['q'] || keys['pageup']) inputAltitude += 1;
+            if (keys['e'] || keys['pagedown']) inputAltitude -= 1;
+            
+            // Joystick controls - relative to helicopter facing
+            // Y-axis controls forward/backward movement
+            // X-axis controls turning
+            inputForward += joystickVector.y; // Push up = forward
+            inputTurn += joystickVector.x;     // Push right = turn right
+            
+            // Mobile altitude buttons
             if (mobileAltUp) inputAltitude += 1;
             if (mobileAltDown) inputAltitude -= 1;
-            mobileBoost = mobileBoostActive;
-        } else {
-            if (keys['arrowup'] || keys['w']) inputForward += 1;
-            if (keys['arrowdown'] || keys['s']) inputForward -= 1;
-            if (keys['arrowleft'] || keys['a']) inputTurn += 1;
-            if (keys['arrowright'] || keys['d']) inputTurn -= 1;
-            if (keys[' ']) inputAltitude += 1;
-            if (keys['shift']) mobileBoost = true;
-        }
-
-        // Apply turning
-        if (Math.abs(inputTurn) > 0.1) {
-            helicopterRotation += inputTurn * 0.05;
-        }
-
-        // Update helicopter rotation immediately for responsive turning
-        helicopter.rotation.y = helicopterRotation + Math.PI / 2;
-
-        // Calculate movement based on helicopter's current facing direction
-        const moveSpeed = (keys['shift'] || mobileBoost) ? 1.2 : 0.6;
-
-        // Convert forward/back input to world space based on helicopter rotation
-        const forwardX = Math.cos(helicopterRotation) * inputForward * moveSpeed;
-        const forwardZ = Math.sin(helicopterRotation) * inputForward * moveSpeed;
-
-        // Apply movement in the direction the helicopter is facing
-        helicopterVelocity.x += forwardX;
-        helicopterVelocity.z += forwardZ;
-
-        // Apply friction
-        helicopterVelocity.multiplyScalar(0.94);
-
-        // Limit speed
-        const maxSpeed = (keys['shift'] || mobileBoost) ? 8 : 4;
-        if (helicopterVelocity.length() > maxSpeed) {
-            helicopterVelocity.normalize().multiplyScalar(maxSpeed);
-        }
-
-        // Project velocity onto forward vector to remove sideways "slide"
-        const forwardVec = new THREE.Vector3(Math.cos(helicopterRotation), 0, Math.sin(helicopterRotation));
-        const speed = helicopterVelocity.dot(forwardVec); // Only keep forward component
-        helicopterVelocity.copy(forwardVec.multiplyScalar(speed));
-
-        // Update position
-        helicopter.position.x += helicopterVelocity.x;
-        helicopter.position.z += helicopterVelocity.z;
-
-        // Altitude control
-        if (inputAltitude !== 0) {
-            const altSpeed = 2;
-            helicopter.position.y += inputAltitude * altSpeed;
-            helicopter.position.y = Math.max(20, Math.min(300, helicopter.position.y));
-        }
-
-        // Update altitude display for mobile
-        const altDisplay = document.getElementById('altitudeDisplay');
-        if (altDisplay) {
-            altDisplay.textContent = `ALT: ${Math.round(helicopter.position.y)}m`;
-        }
-
-        // Boundary limits - massive map boundaries
-        helicopter.position.x = Math.max(-11000, Math.min(11000, helicopter.position.x));
-        helicopter.position.z = Math.max(-11000, Math.min(11000, helicopter.position.z));
-
-        // Banking and pitch based on movement
-        helicopter.rotation.z = inputTurn * 0.2; // Bank when turning
-        helicopter.rotation.x = (inputForward * 0.1) - (speed * 0.02); // Pitch forward when moving
-
-        // Rotate rotors
-        rotorGroup.rotation.y += 0.4;
-
-        // Camera follow - behind and above helicopter
-        const cameraDistance = 200 + (speed * 10); // Dynamic distance based on speed
-        const cameraHeight = 100 + helicopter.position.y * 0.5;
-
-        const cameraOffset = new THREE.Vector3(
-            -Math.cos(helicopterRotation) * cameraDistance,
-            cameraHeight,
-            -Math.sin(helicopterRotation) * cameraDistance
-        );
-
-        camera.position.lerp(helicopter.position.clone().add(cameraOffset), 0.08);
-        camera.lookAt(helicopter.position);
-
-        // Check POI proximity - larger detection radius for huge map
-        poiMarkers.forEach((marker, i) => {
-            const distance = helicopter.position.distanceTo(marker.position);
-            if (distance < 180 && !visitedPOIs[i]) {
-                marker.material.color.set(0xffffff);
-                // Land prompt
-                if ((keys['l'] && !isMobile) || (landBtnPressed && isMobile)) {
-                    openPOIModal(i);
+            
+            // Apply turning
+            if (Math.abs(inputTurn) > 0.1) {
+                helicopterRotation += inputTurn * 0.05;
+            }
+            
+            // Update helicopter rotation immediately for responsive turning
+            helicopter.rotation.y = helicopterRotation + Math.PI / 2;
+            
+            // Calculate movement based on helicopter's current facing direction
+            const moveSpeed = (keys['shift'] || mobileBoost) ? 1.2 : 0.6;
+            
+            // Convert forward/back input to world space based on helicopter rotation
+            const forwardX = Math.cos(helicopterRotation) * inputForward * moveSpeed;
+            const forwardZ = Math.sin(helicopterRotation) * inputForward * moveSpeed;
+            
+            // Apply movement in the direction the helicopter is facing
+            helicopterVelocity.x += forwardX;
+            helicopterVelocity.z += forwardZ;
+            
+            // Apply friction
+            helicopterVelocity.multiplyScalar(0.94);
+            
+            // Limit speed
+            const maxSpeed = (keys['shift'] || mobileBoost) ? 8 : 4;
+            if (helicopterVelocity.length() > maxSpeed) {
+                helicopterVelocity.normalize().multiplyScalar(maxSpeed);
+            }
+            
+            // Update position
+            helicopter.position.x += helicopterVelocity.x;
+            helicopter.position.z += helicopterVelocity.z;
+            
+            // Altitude control
+            if (inputAltitude !== 0) {
+                const altSpeed = 2;
+                helicopter.position.y += inputAltitude * altSpeed;
+                helicopter.position.y = Math.max(20, Math.min(300, helicopter.position.y));
+            }
+            
+            // Update altitude display for mobile
+            const altDisplay = document.getElementById('altitudeDisplay');
+            if (altDisplay) {
+                altDisplay.textContent = `ALT: ${Math.round(helicopter.position.y)}m`;
+            }
+            
+            // Boundary limits - massive map boundaries
+            helicopter.position.x = Math.max(-11000, Math.min(11000, helicopter.position.x));
+            helicopter.position.z = Math.max(-11000, Math.min(11000, helicopter.position.z));
+            
+            // Banking and pitch based on movement
+            const speed = helicopterVelocity.length();
+            helicopter.rotation.z = inputTurn * 0.2; // Bank when turning
+            helicopter.rotation.x = (inputForward * 0.1) - (speed * 0.02); // Pitch forward when moving
+            
+            // Rotate rotors
+            rotorGroup.rotation.y += 0.4;
+            
+            // Camera follow - behind and above helicopter
+            const cameraDistance = 200 + (speed * 10); // Dynamic distance based on speed
+            const cameraHeight = 100 + helicopter.position.y * 0.5;
+            
+            const cameraOffset = new THREE.Vector3(
+                -Math.cos(helicopterRotation) * cameraDistance,
+                cameraHeight,
+                -Math.sin(helicopterRotation) * cameraDistance
+            );
+            
+            camera.position.lerp(helicopter.position.clone().add(cameraOffset), 0.08);
+            camera.lookAt(helicopter.position);
+            
+            // Check POI proximity - larger detection radius for huge map
+            poiMarkers.forEach(marker => {
+                const distance = helicopter.position.distanceTo(marker.position);
+                
+                if (distance < 100 + helicopter.position.y * 0.5) { // Larger radius at higher altitude
+                    marker.scale.setScalar(1 + Math.sin(Date.now() * 0.008) * 0.15);
+                    
+                    if ((keys[' '] || mobileLand) && !marker.userData.visited) {
+                        visitPOI(marker);
+                    }
+                } else {
+                    marker.scale.setScalar(1);
                 }
-                if (isMobile) showLandBtn(i);
+            });
+            
+            // Fuel consumption
+            const fuelConsumption = (keys['shift'] || mobileBoost) ? 0.25 : 0.08;
+            fuel = Math.max(0, fuel - fuelConsumption * deltaTime);
+            document.getElementById('fuelFill').style.width = fuel + '%';
+            
+            // Warning system
+            const warningOverlay = document.getElementById('warningOverlay');
+            if (fuel < 20) {
+                warningOverlay.classList.add('active');
             } else {
-                marker.material.color.set(visitedPOIs[i] ? 0x66e66d : 0xffe066);
-                if (isMobile) hideLandBtn();
+                warningOverlay.classList.remove('active');
+            }
+            
+            // Update gauges
+            const speedPercent = (speed / maxSpeed) * 100;
+            
+            // Speed gauge
+            const speedNeedle = document.getElementById('speedNeedle');
+            if (speedNeedle) {
+                const speedAngle = -90 + (speedPercent * 1.8);
+                speedNeedle.style.transform = `translateX(-50%) rotate(${speedAngle}deg)`;
+                document.getElementById('speedValue').textContent = Math.round(speed * 40);
+            }
+            
+            // Altitude gauge
+            const altNeedle = document.getElementById('altNeedle');
+            if (altNeedle) {
+                const altPercent = ((helicopter.position.y - 20) / 280) * 100;
+                const altAngle = -90 + (altPercent * 1.8);
+                altNeedle.style.transform = `translateX(-50%) rotate(${altAngle}deg)`;
+                document.getElementById('altValue').textContent = Math.round(helicopter.position.y);
+            }
+        }
+        
+        function visitPOI(marker) {
+            const poi = marker.userData;
+            poi.visited = true;
+            visitedPOIs.add(poi.id);
+            score += 100;
+            fuel = Math.min(100, fuel + 25);
+            
+            // Update marker color
+            marker.children.forEach(child => {
+                if (child.material) {
+                    child.material.color.setHex(0x00ff00);
+                }
+            });
+            
+            // Update UI
+            document.getElementById('score').textContent = score.toString().padStart(4, '0');
+            document.getElementById('pois').textContent = 
+                `${visitedPOIs.size.toString().padStart(2, '0')}/16`;
+            
+            // Achievements
+            if (visitedPOIs.size === 1) {
+                showAchievement('First Target!', 'Mission started');
+            } else if (visitedPOIs.size === 8) {
+                showAchievement('Halfway!', '8 targets down');
+            } else if (visitedPOIs.size === 16) {
+                showAchievement('Mission Complete!', 'All targets destroyed');
+                score += 1000;
+            }
+        }
+        
+        function showAchievement(title, desc) {
+            const achievement = document.getElementById('achievement');
+            document.getElementById('achievementTitle').textContent = title;
+            document.getElementById('achievementDesc').textContent = desc;
+            achievement.classList.add('show');
+            
+            setTimeout(() => {
+                achievement.classList.remove('show');
+            }, 3500);
+        }
+        
+        function updateRadar() {
+            const radarCanvas = document.getElementById('radarCanvas');
+            const radarCtx = radarCanvas.getContext('2d');
+            radarCanvas.width = 120;
+            radarCanvas.height = 120;
+            
+            const centerX = 60;
+            const centerY = 60;
+            
+            // Phosphor fade effect
+            radarCtx.fillStyle = 'rgba(0, 10, 0, 0.2)';
+            radarCtx.fillRect(0, 0, 120, 120);
+            
+            // Range rings
+            radarCtx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
+            radarCtx.lineWidth = 1;
+            for (let i = 1; i <= 2; i++) {
+                radarCtx.beginPath();
+                radarCtx.arc(centerX, centerY, i * 25, 0, Math.PI * 2);
+                radarCtx.stroke();
+            }
+            
+            // Crosshairs
+            radarCtx.beginPath();
+            radarCtx.moveTo(0, centerY);
+            radarCtx.lineTo(120, centerY);
+            radarCtx.moveTo(centerX, 0);
+            radarCtx.lineTo(centerX, 120);
+            radarCtx.stroke();
+            
+            // POI blips - adjusted scale for massive map
+            pois.forEach(poi => {
+                const relX = (poi.x / 22000) * 100;
+                const relZ = (poi.z / 22000) * 100;
+                
+                radarCtx.fillStyle = poi.visited ? '#00ff00' : '#ffff00';
+                radarCtx.beginPath();
+                radarCtx.arc(centerX + relX, centerY + relZ, 2, 0, Math.PI * 2);
+                radarCtx.fill();
+            });
+            
+            // Helicopter - adjusted scale for massive map
+            const heliX = (helicopter.position.x / 22000) * 100;
+            const heliZ = (helicopter.position.z / 22000) * 100;
+            
+            radarCtx.fillStyle = '#ff0000';
+            radarCtx.beginPath();
+            radarCtx.arc(centerX + heliX, centerY + heliZ, 3, 0, Math.PI * 2);
+            radarCtx.fill();
+            
+            // Direction line
+            radarCtx.strokeStyle = '#ff0000';
+            radarCtx.lineWidth = 1;
+            radarCtx.beginPath();
+            radarCtx.moveTo(centerX + heliX, centerY + heliZ);
+            radarCtx.lineTo(
+                centerX + heliX + Math.cos(helicopterRotation) * 8,
+                centerY + heliZ + Math.sin(helicopterRotation) * 8
+            );
+            radarCtx.stroke();
+        }
+        
+        function updateUI() {
+            if (gameRunning) {
+                const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('time').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        // Animation loop
+        let lastTime = 0;
+        function animate(currentTime = 0) {
+            if (!gameRunning) return;
+            
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            updateHelicopter(deltaTime || 0.016);
+            updateRadar();
+            updateUI();
+            
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             }
         });
-
-        // HUD
-        let spd = Math.abs(speed*21);
-        let speedDisplay = document.getElementById('speedDisplay');
-        if (speedDisplay) speedDisplay.textContent = `SPD: ${Math.round(spd)} km/h`;
-        renderHUD();
-
-        renderer.render(scene, camera);
-    }
-
-    // --- POI Modal ---
-    function openPOIModal(idx) {
-        if (visitedPOIs[idx]) return;
-        visitedPOIs[idx] = true;
-        currentPOI = idx;
-        let modal = document.getElementById('poi-modal');
-        if (modal) modal.style.display = 'block';
-        document.getElementById('poi-title').textContent = POIS[idx].name;
-        document.getElementById('poi-desc').textContent = POIS[idx].desc;
-        document.getElementById('next-poi').onclick = () => {
-            modal.style.display = 'none';
-            // Optionally fly to next unvisited
-        };
-        document.getElementById('poi-close').onclick = () => {
-            modal.style.display = 'none';
-        };
-        renderHUD();
-    }
-
-    // --- Mobile Controls ---
-    let isMobile = /android|iphone|ipad|mobile/i.test(navigator.userAgent);
-    let joystickVector = {x:0, y:0};
-    let landBtnPressed = false;
-    let mobileAltUp = false, mobileAltDown = false, mobileBoostActive = false;
-    function setupMobileControls() {
-        if (!isMobile) return;
-        document.getElementById('mobile-controls').style.display = 'block';
-        // Joystick
-        const joystick = document.getElementById('joystick');
-        let dragging = false, origin = {x:0,y:0};
-        joystick.addEventListener('touchstart', e=>{
-            dragging=true;
-            let t = e.touches[0];
-            origin.x = t.clientX; origin.y = t.clientY;
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof THREE !== 'undefined') {
+                init3DGame();
+            } else {
+                console.error('Three.js failed to load');
+                // Show error message
+                document.getElementById('startScreen').innerHTML = `
+                    <h1 class="game-logo">ERROR</h1>
+                    <p class="game-subtitle">Failed to load 3D engine</p>
+                    <button class="start-button" onclick="location.reload()">RETRY</button>
+                `;
+            }
         });
-        joystick.addEventListener('touchend', e=>{
-            dragging=false;
-            joystickVector.x = joystickVector.y = 0;
-        });
-        joystick.addEventListener('touchmove', e=>{
-            if (!dragging) return;
-            let t = e.touches[0];
-            let dx = Math.max(-1, Math.min(1, (t.clientX-origin.x)/60));
-            let dy = Math.max(-1, Math.min(1, (origin.y-t.clientY)/60));
-            joystickVector.x = dx; joystickVector.y = dy;
-        });
-        // Altitude
-        document.getElementById('alt-up').addEventListener('touchstart', ()=>mobileAltUp=true);
-        document.getElementById('alt-up').addEventListener('touchend', ()=>mobileAltUp=false);
-        document.getElementById('alt-down').addEventListener('touchstart', ()=>mobileAltDown=true);
-        document.getElementById('alt-down').addEventListener('touchend', ()=>mobileAltDown=false);
-        // Boost
-        joystick.addEventListener('touchstart', ()=>mobileBoostActive=true);
-        joystick.addEventListener('touchend', ()=>mobileBoostActive=false);
-        // Land
-        document.getElementById('land-btn').addEventListener('touchstart', ()=>landBtnPressed=true);
-        document.getElementById('land-btn').addEventListener('touchend', ()=>landBtnPressed=false);
-    }
-    function showLandBtn(idx) {
-        let btn = document.getElementById('land-btn');
-        if (btn) btn.style.display = 'block';
-    }
-    function hideLandBtn() {
-        let btn = document.getElementById('land-btn');
-        if (btn) btn.style.display = 'none';
-    }
-
-    // --- Start ---
-    window.onload = init;
     </script>
 </body>
 </html>
