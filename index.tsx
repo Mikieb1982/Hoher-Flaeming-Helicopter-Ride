@@ -19,10 +19,22 @@
             padding: 10px 20px;
             border-radius: 8px;
         }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-family: sans-serif;
+            padding: 5px 10px;
+            border-radius: 4px;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <div id="loader">Loading...</div>
+    <div id="hud">Alt: <span id="hud-altitude">0</span> | Speed: <span id="hud-speed">0</span></div>
     <!-- Load the Three.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -118,64 +130,61 @@
         );
 
         // --- CONTROLS ---
-        const keys = {
-            ArrowUp: false, w: false, W: false,
-            ArrowDown: false, s: false, S: false,
-            ArrowLeft: false, a: false, A: false,
-            ArrowRight: false, d: false, D: false,
-            PageUp: false, ' ': false,
-            PageDown: false, Shift: false,
+        const activeKeys = {};
+        const keyMap = {
+            forward: ['ArrowUp', 'w', 'W'],
+            backward: ['ArrowDown', 's', 'S'],
+            left: ['ArrowLeft', 'a', 'A'],
+            right: ['ArrowRight', 'd', 'D'],
+            up: ['PageUp', ' '],
+            down: ['PageDown', 'Shift'],
         };
 
         document.addEventListener('keydown', (event) => {
-            if (keys.hasOwnProperty(event.key)) keys[event.key] = true;
+            activeKeys[event.key] = true;
         });
         document.addEventListener('keyup', (event) => {
-            if (keys.hasOwnProperty(event.key)) keys[event.key] = false;
+            activeKeys[event.key] = false;
         });
         
-        // --- MOUSE LOOK ---
-        let isMouseDown = false;
-        let prevMouseX = 0;
-        let prevMouseY = 0;
-        
-        document.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-        
-        document.addEventListener('mouseup', () => {
-            isMouseDown = false;
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isMouseDown) return;
-            const deltaX = e.clientX - prevMouseX;
-            helicopter.rotation.y -= deltaX * 0.005;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-
         // --- GAME LOOP ---
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
-
             const delta = clock.getDelta();
             const moveSpeed = 10.0 * delta; // Increased speed
-            const rotationSpeed = (Math.PI / 2) * delta; // Increased rotation speed
 
-            if (keys.ArrowUp || keys.w || keys.W) helicopter.translateZ(-moveSpeed);
-            if (keys.ArrowDown || keys.s || keys.S) helicopter.translateZ(moveSpeed);
-            if (keys.ArrowLeft || keys.a || keys.A) helicopter.rotation.y += rotationSpeed;
-            if (keys.ArrowRight || keys.d || keys.D) helicopter.rotation.y -= rotationSpeed;
-            if (keys.PageUp || keys[' ']) helicopter.position.y += moveSpeed;
-            if (keys.PageDown || keys.Shift) helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed); // Prevent going through floor
-            
+            const pressed = (action) => keyMap[action].some(key => activeKeys[key]);
+
+            const moveDir = new THREE.Vector3(
+                (pressed('right') ? 1 : 0) - (pressed('left') ? 1 : 0),
+                0,
+                (pressed('backward') ? 1 : 0) - (pressed('forward') ? 1 : 0)
+            );
+            if (moveDir.lengthSq() > 0) {
+                moveDir.normalize();
+                helicopter.position.add(moveDir.multiplyScalar(moveSpeed));
+            }
+
+            if (pressed('up')) helicopter.position.y += moveSpeed;
+            if (pressed('down')) helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed); // Prevent going through floor
+
             // Animate rotors
             mainRotor.rotation.y += delta * 30;
             tailRotor.rotation.x += delta * 30;
+
+            // Orient helicopter to face movement direction and update HUD
+            const deltaPos = helicopter.position.clone().sub(prevPosition);
+            const horizontalDelta = deltaPos.clone();
+            horizontalDelta.y = 0;
+            if (horizontalDelta.lengthSq() > 0) {
+                const yaw = Math.atan2(horizontalDelta.x, horizontalDelta.z);
+                helicopter.rotation.y = THREE.MathUtils.lerp(helicopter.rotation.y, yaw, 0.1);
+            }
+            const speed = delta > 0 ? deltaPos.length() / delta : 0;
+            hudAltitude.textContent = helicopter.position.y.toFixed(1);
+            hudSpeed.textContent = speed.toFixed(1);
+            prevPosition.copy(helicopter.position);
 
             // Update camera to follow helicopter
             const offset = new THREE.Vector3(0, 5, 15);
@@ -195,6 +204,10 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        const hudAltitude = document.getElementById('hud-altitude');
+        const hudSpeed = document.getElementById('hud-speed');
+        const prevPosition = new THREE.Vector3().copy(helicopter.position);
 
         animate();
     </script>
