@@ -173,7 +173,7 @@
             mainRotor.rotation.y += delta * 30;
             tailRotor.rotation.x += delta * 30;
 
-            // Orient helicopter to face movement direction and update HUD
+            // Orient helicopter to face movement direction
             const deltaPos = helicopter.position.clone().sub(prevPosition);
             const horizontalDelta = deltaPos.clone();
             horizontalDelta.y = 0;
@@ -181,6 +181,8 @@
                 const yaw = Math.atan2(horizontalDelta.x, horizontalDelta.z);
                 helicopter.rotation.y = THREE.MathUtils.lerp(helicopter.rotation.y, yaw, 0.1);
             }
+
+            // HUD updates
             const speed = delta > 0 ? deltaPos.length() / delta : 0;
             hudAltitude.textContent = helicopter.position.y.toFixed(1);
             hudSpeed.textContent = speed.toFixed(1);
