@@ -181,8 +181,10 @@
 
             const pressed = (action) => keyMap[action].some(key => activeKeys[key]);
 
-            if (pressed('forward')) helicopter.translateZ(-moveSpeed);
-            if (pressed('backward')) helicopter.translateZ(moveSpeed);
+            // Move the helicopter in the direction its nose is facing
+            // so pressing forward flies nose-first instead of tail-first.
+            if (pressed('forward')) helicopter.translateZ(moveSpeed);
+            if (pressed('backward')) helicopter.translateZ(-moveSpeed);
             if (pressed('left')) helicopter.rotation.y += rotationSpeed;
             if (pressed('right')) helicopter.rotation.y -= rotationSpeed;
             if (pressed('up')) helicopter.position.y += moveSpeed;
@@ -199,8 +201,8 @@
             hudSpeed.textContent = speed.toFixed(1);
             prevPosition.copy(helicopter.position);
 
-            // Update camera to follow helicopter
-            const offset = new THREE.Vector3(0, 5, 15);
+            // Update camera to follow behind the helicopter so it flies nose-first
+            const offset = new THREE.Vector3(0, 5, -15);
             const cameraPosition = offset.applyMatrix4(helicopter.matrixWorld);
             camera.position.lerp(cameraPosition, 0.1); // Smooth camera follow
             
