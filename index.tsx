@@ -167,7 +167,9 @@
             }
 
             if (pressed('up')) helicopter.position.y += moveSpeed;
-            if (pressed('down')) helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed); // Prevent going through floor
+            if (pressed('down')) {
+                helicopter.position.y = Math.max(0.5, helicopter.position.y - moveSpeed); // Prevent going through floor
+            }
 
             // Animate rotors
             mainRotor.rotation.y += delta * 30;
