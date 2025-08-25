@@ -201,8 +201,8 @@
             hudSpeed.textContent = speed.toFixed(1);
             prevPosition.copy(helicopter.position);
 
-            // Update camera to follow helicopter
-            const offset = new THREE.Vector3(0, 5, 15);
+            // Update camera to follow behind the helicopter so it flies nose-first
+            const offset = new THREE.Vector3(0, 5, -15);
             const cameraPosition = offset.applyMatrix4(helicopter.matrixWorld);
             camera.position.lerp(cameraPosition, 0.1); // Smooth camera follow
             
