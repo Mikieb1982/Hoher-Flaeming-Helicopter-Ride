@@ -146,6 +146,8 @@
         document.addEventListener('keyup', (event) => {
             activeKeys[event.key] = false;
         });
+
+        const pressed = (action) => keyMap[action].some(key => activeKeys[key]);
         
         // --- GAME LOOP ---
         const clock = new THREE.Clock();
@@ -153,8 +155,6 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             const moveSpeed = 10.0 * delta; // Increased speed
-
-            const pressed = (action) => keyMap[action].some(key => activeKeys[key]);
 
             const moveDir = new THREE.Vector3(
                 (pressed('right') ? 1 : 0) - (pressed('left') ? 1 : 0),
